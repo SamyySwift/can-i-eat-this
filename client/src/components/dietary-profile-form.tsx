@@ -13,9 +13,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight, ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const dietaryProfileSchema = z.object({
   allergies: z.array(z.string()).optional(),
@@ -171,18 +171,50 @@ export default function DietaryProfileForm({
       description: "Select all that apply",
       fieldName: "allergies" as const,
       options: allergyOptions,
+      gradientColors: [
+        "from-green-300 to-blue-400", // Light green to blue
+        "from-purple-300 to-pink-400", // Light purple to pink
+        "from-yellow-300 to-orange-400", // Light yellow to orange
+        "from-blue-300 to-indigo-400", // Light blue to indigo
+        "from-red-300 to-pink-400", // Light red to pink
+        "from-teal-300 to-cyan-400", // Light teal to cyan
+        "from-indigo-300 to-purple-400", // Light indigo to purple
+        "from-orange-300 to-red-400", // Light orange to red
+        "from-pink-300 to-rose-400", // Light pink to rose
+      ],
     },
     {
       title: "What are your dietary preferences?",
       description: "Select all that apply",
       fieldName: "dietaryPreferences" as const,
       options: dietaryPreferenceOptions,
+      gradientColors: [
+        "from-blue-300 to-purple-400", // Light blue to purple
+        "from-green-300 to-teal-400", // Light green to teal
+        "from-yellow-300 to-amber-400", // Light yellow to amber
+        "from-red-300 to-orange-400", // Light red to orange
+        "from-indigo-300 to-blue-400", // Light indigo to blue
+        "from-pink-300 to-purple-400", // Light pink to purple
+        "from-teal-300 to-green-400", // Light teal to green
+        "from-amber-300 to-yellow-400", // Light amber to yellow
+        "from-purple-300 to-indigo-400", // Light purple to indigo
+      ],
     },
     {
       title: "Do you have any health restrictions?",
       description: "Select all that apply",
       fieldName: "healthRestrictions" as const,
       options: healthRestrictionOptions,
+      gradientColors: [
+        "from-purple-300 to-blue-400", // Light purple to blue
+        "from-green-300 to-emerald-400", // Light green to emerald
+        "from-rose-300 to-red-400", // Light rose to red
+        "from-amber-300 to-orange-400", // Light amber to orange
+        "from-blue-300 to-cyan-400", // Light blue to cyan
+        "from-pink-300 to-rose-400", // Light pink to rose
+        "from-emerald-300 to-teal-400", // Light emerald to teal
+        "from-orange-300 to-amber-400", // Light orange to amber
+      ],
     },
   ];
 
@@ -266,38 +298,58 @@ export default function DietaryProfileForm({
           name={currentStepData.fieldName}
           render={() => (
             <div className="space-y-4">
-              {currentStepData.options.map((option) => (
-                <FormItem
-                  key={option.id}
-                  className="flex items-center space-x-3 space-y-0 bg-white rounded-full p-4 shadow-sm border border-black"
-                >
-                  <FormControl>
-                    <Checkbox
-                      checked={form
-                        .watch(currentStepData.fieldName)
-                        ?.includes(option.id)}
-                      onCheckedChange={(checked) => {
-                        const currentValues =
-                          form.getValues(currentStepData.fieldName) || [];
-                        const newValues = checked
-                          ? [...currentValues, option.id]
-                          : currentValues.filter((val) => val !== option.id);
-                        form.setValue(currentStepData.fieldName, newValues, {
-                          shouldValidate: true,
-                        });
-                      }}
-                    />
-                  </FormControl>
-                  <div className="flex-1">
-                    <FormLabel className="text-base font-medium">
-                      {option.label}
-                    </FormLabel>
-                    <p className="text-sm text-gray-500">
-                      {option.description}
-                    </p>
+              {currentStepData.options.map((option, index) => {
+                const isSelected = form
+                  .watch(currentStepData.fieldName)
+                  ?.includes(option.id);
+                const gradientColor =
+                  currentStepData.gradientColors[
+                    index % currentStepData.gradientColors.length
+                  ];
+
+                return (
+                  <div
+                    key={option.id}
+                    onClick={() => {
+                      const currentValues =
+                        form.getValues(currentStepData.fieldName) || [];
+                      const newValues = isSelected
+                        ? currentValues.filter((val) => val !== option.id)
+                        : [...currentValues, option.id];
+                      form.setValue(currentStepData.fieldName, newValues, {
+                        shouldValidate: true,
+                      });
+                    }}
+                    className={cn(
+                      "flex items-center space-x-3 py-4 px-8 rounded-full cursor-pointer transition-all duration-500 shadow-sm border",
+                      isSelected
+                        ? `bg-gradient-to-r ${gradientColor} text-white border-transparent`
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gradient-to-r hover:from-green-300 hover:to-gray-200"
+                    )}
+                  >
+                    <div className="flex-1">
+                      <p
+                        className={cn(
+                          "text-base font-semibold",
+                          isSelected ? "text-white" : "text-gray-900"
+                        )}
+                      >
+                        {option.label}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isSelected
+                            ? "text-white text-opacity-90"
+                            : "text-gray-500"
+                        )}
+                      >
+                        {option.description}
+                      </p>
+                    </div>
                   </div>
-                </FormItem>
-              ))}
+                );
+              })}
             </div>
           )}
         />
@@ -335,7 +387,8 @@ export default function DietaryProfileForm({
             )}
 
             <Button
-              type="button" // Change to button type for all steps
+              type="button"
+              className="bg-green-500 hover:bg-green-600 text-white"
               onClick={
                 currentStep === steps.length - 1
                   ? form.handleSubmit(onSubmit)
@@ -349,7 +402,7 @@ export default function DietaryProfileForm({
                 "Save to Profile"
               ) : (
                 <>
-                  Next <ChevronRight className="ml-2 h-4 w-4" />
+                  Continue <ChevronRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>

@@ -58,9 +58,9 @@ export default function DietaryProfilePage({ auth }: DietaryProfilePageProps) {
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          {/* <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Your Dietary Profile
-          </h1>
+          </h1> */}
           {/* <Button 
             variant="ghost" 
             size="sm" 
