@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { InfoIcon, ArrowLeft, ArrowRight } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 
 const dietaryProfileSchema = z.object({
   allergies: z.array(z.string()).optional(),
@@ -94,6 +94,11 @@ export default function DietaryProfileForm({
       id: "paleo",
       label: "Paleo",
       description: "No processed foods, grains, dairy",
+    },
+    {
+      id: "pescatarian",
+      label: "Pescatarian",
+      description: "Avoids meat but consumes fish and seafood",
     },
     {
       id: "halal",
@@ -264,7 +269,7 @@ export default function DietaryProfileForm({
               {currentStepData.options.map((option) => (
                 <FormItem
                   key={option.id}
-                  className="flex items-center space-x-3 space-y-0 bg-white rounded-lg p-4 shadow-sm border border-gray-100"
+                  className="flex items-center space-x-3 space-y-0 bg-white rounded-full p-4 shadow-sm border border-black"
                 >
                   <FormControl>
                     <Checkbox
@@ -302,22 +307,25 @@ export default function DietaryProfileForm({
   );
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="max-w-lg mx-auto">
       <Form {...form}>
-        <form onSubmit={(e) => {
-          // Prevent form submission on Enter key
-          if (currentStep < steps.length - 1) {
-            e.preventDefault();
-            handleNext();
-          } else {
-            form.handleSubmit(onSubmit)(e);
-          }
-        }} className="space-y-8">
+        <form
+          onSubmit={(e) => {
+            // Prevent form submission on Enter key
+            if (currentStep < steps.length - 1) {
+              e.preventDefault();
+              handleNext();
+            } else {
+              form.handleSubmit(onSubmit)(e);
+            }
+          }}
+          className="space-y-8"
+        >
           {renderStep()}
           <div className="flex justify-between pt-6">
             {currentStep > 0 ? (
               <Button type="button" variant="outline" onClick={handlePrev}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ChevronLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
             ) : (
@@ -328,9 +336,11 @@ export default function DietaryProfileForm({
 
             <Button
               type="button" // Change to button type for all steps
-              onClick={currentStep === steps.length - 1 
-                ? form.handleSubmit(onSubmit) 
-                : handleNext}
+              onClick={
+                currentStep === steps.length - 1
+                  ? form.handleSubmit(onSubmit)
+                  : handleNext
+              }
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -339,7 +349,7 @@ export default function DietaryProfileForm({
                 "Save to Profile"
               ) : (
                 <>
-                  Next <ArrowRight className="ml-2 h-4 w-4" />
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>
