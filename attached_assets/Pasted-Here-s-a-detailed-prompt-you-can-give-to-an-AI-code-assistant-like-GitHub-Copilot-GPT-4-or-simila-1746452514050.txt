@@ -1,0 +1,94 @@
+Here’s a detailed prompt you can give to an AI code assistant (like GitHub Copilot, GPT-4, or similar tools) to build the AI Food Alert App using Node.js, Express, Vite, React, TailwindCSS, JavaScript, and Supabase:
+
+⸻
+
+🧠 Prompt for the AI Coder:
+
+Build a modern AI-powered food app called “Can I Eat This?” using the following stack:
+	•	Frontend: React (with Vite) + TailwindCSS
+	•	Backend: Node.js + Express
+	•	Database & Auth: Supabase
+	•	AI Model: Use a pre-trained food classification model (e.g., from Food101 or Clarifai/FoodAI API)
+	•	Deployment-ready and fully working with basic authentication and storage.
+
+⸻
+
+✨ Key Features to Build:
+
+1. User Authentication
+	•	Email/password signup and login using Supabase
+	•	On sign up, user should complete a dietary profile form:
+	•	Allergies (e.g. peanuts, seafood, eggs)
+	•	Dietary preference (e.g. vegetarian, halal, keto)
+	•	Health restrictions (e.g. diabetes, hypertension)
+	•	Store this profile in Supabase under each user
+
+2. Food Upload & Image Classifier
+	•	Frontend:
+	•	Simple UI where user can upload or snap a food image
+	•	Glassy, modern UI using TailwindCSS (with backdrop blur, shadows, rounded edges)
+	•	Backend (Node.js):
+	•	Receive uploaded image
+	•	Send image to a food recognition API (like Clarifai or Google Vision API)
+	•	Get back predicted food label (e.g., “Spaghetti Bolognese”)
+
+3. Ingredient Matching
+	•	Create or fetch a simple mapping of food → ingredients (e.g., Spaghetti Bolognese → pasta, beef, tomato, dairy)
+	•	Cross-reference ingredients against user’s dietary profile
+	•	Return response:
+
+{
+  "food": "Spaghetti Bolognese",
+  "safe": false,
+  "reason": "Contains dairy which you're allergic to",
+  "ingredients": ["pasta", "beef", "tomato", "dairy"]
+}
+
+
+
+4. Result Display UI
+	•	Show a result page with:
+	•	Food name
+	•	Safety status ✅ / ❌ / ⚠️
+	•	Explanation (“Contains X”, “May be high in sugar”)
+	•	Ingredients list (optionally editable)
+	•	“Log this meal” button to store it in Supabase for diary/history tracking
+
+5. User History/Diary
+	•	Page to view past scanned meals and whether they were marked safe or not
+	•	Allow the user to rate predictions and submit corrections
+
+6. Daily Limit for Free Users
+	•	Use Supabase row count or timestamp tracking to allow only 10 uploads per month
+	•	Display upgrade prompt when limit is hit
+
+⸻
+
+📦 Folder Structure Suggestion:
+
+/client (React frontend)
+/server (Express backend)
+
+
+
+⸻
+
+📲 Tools & APIs to Use:
+	•	Supabase: Auth, user profile, scan logs
+	•	Food recognition:
+	•	Option 1: Clarifai Food Model
+	•	Option 2: Google Cloud Vision
+	•	Option 3: Custom hosted TensorFlow.js model (for later)
+	•	Email: Use EmailJS for confirmation/reminders (optional)
+	•	Hosting: Netlify (frontend) + Render/Vercel (backend) or Railway
+
+⸻
+
+🧪 Bonus AI Features (optional after MVP)
+	•	GPT API to explain ingredients and dietary advice
+	•	OCR model to read restaurant menus
+	•	Suggest safer alternatives for unsafe dishes
+
+⸻
+
+Would you like me to generate the actual starter code for the backend and frontend based on this prompt?
