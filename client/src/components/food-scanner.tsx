@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Camera, Upload, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,7 @@ export default function FoodScanner({
       }
 
       const data = await response.json();
+      console.log(data);
 
       // Redirect to the result page
       setLocation(`/result/${data.scanId}`);
@@ -210,25 +211,6 @@ export default function FoodScanner({
                 <Upload className="mr-2 h-4 w-4" /> Upload Photo
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {maxScans > 0 && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="font-medium text-gray-700">Monthly Usage</span>
-            <span className="font-medium text-gray-900">
-              {scansUsed}/{maxScans} scans
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-primary h-2.5 rounded-full"
-              style={{
-                width: `${Math.min(100, (scansUsed / maxScans) * 100)}%`,
-              }}
-            ></div>
           </div>
         </div>
       )}

@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { FoodScan, FoodSafetyCheckResponse } from "@/types";
 import CachedImage from "@/components/cached-image";
-import { formatDate } from "@/lib/utils";
+import { fetchApi } from "@/lib/api";
 
 interface ResultDetailsProps {
   scanId: string;
@@ -34,6 +34,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     isError,
   } = useQuery<FoodScan[]>({
     queryKey: [`/api/scans/${scanId}`],
+    queryFn: () => fetchApi(`/api/scans/${scanId}`),
     retry: 2,
     retryDelay: 1000,
   });
@@ -65,6 +66,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     }>
   >({
     queryKey: [`/api/food/alternatives/${scanId}`],
+    queryFn: () => fetchApi(`/api/food/alternatives/${scanId}`),
     enabled: !!scan && scan.isSafe === false,
   });
 
@@ -75,15 +77,15 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     avoidList?: string[];
   }>({
     queryKey: [`/api/food/dietary-info/${scanId}`],
+    queryFn: () => fetchApi(`/api/food/dietary-info/${scanId}`),
     enabled: !!scan,
   });
 
   const handleSaveToHistory = async () => {
     try {
       // In a real implementation, we might want to save additional metadata
-      await fetch(`/api/scans/${scanId}/save`, {
+      await fetchApi(`/api/scans/${scanId}/save`, {
         method: "POST",
-        credentials: "include",
       });
 
       toast({

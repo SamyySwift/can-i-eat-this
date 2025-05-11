@@ -21,7 +21,6 @@ interface RecentScansProps {
 }
 
 export default function RecentScans({ userId }: RecentScansProps) {
-  console.log("Recent Scans - User ID:", userId);
   const {
     data: scans,
     isLoading,
