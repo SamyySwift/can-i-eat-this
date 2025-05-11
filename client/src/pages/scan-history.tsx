@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import {
@@ -38,7 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CachedImage from "@/components/cached-image";
 import { preloadImages } from "@/lib/imageCache";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { fetchApi } from "../lib/api";
 
 interface ScanHistoryProps {
   auth: {
@@ -70,7 +70,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
     isError,
   } = useQuery<FoodScan[]>({
     queryKey: [`scans-${user?.id}`],
-    queryFn: () => api.get(`/api/scans/user/${user?.id}`),
+    queryFn: () => fetchApi(`/api/scans/user/${user?.id}`),
     enabled: isAuthenticated,
     onSuccess: (data: FoodScan[]) => {
       // Preload all scan images for better performance
@@ -92,7 +92,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       );
       const accessToken = supabaseAuth?.access_token || "";
 
-      const response = await fetch(`/api/scans/user/${user?.id}`, {
+      const response = await fetchApi(`/api/scans/user/${user?.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -317,7 +317,11 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                   <Card className="h-full cursor-pointer hover:shadow-md transition-shadow duration-300">
                     <div className="h-48 overflow-hidden">
                       <CachedImage
-                        src={scan.imageUrl || ""}
+                        src={
+                          scan.imageUrl
+                            ? `${import.meta.env.VITE_API_URL}${scan.imageUrl}`
+                            : ""
+                        }
                         alt={scan.foodName || "Food image"}
                         foodName={scan.foodName}
                         className="w-full h-full object-cover"

@@ -122,37 +122,6 @@ export default function RecentScans({ userId }: RecentScansProps) {
     }
   };
 
-  // Get appropriate food emoji based on food name
-  const getFoodEmoji = (foodName?: string): string => {
-    if (!foodName) return "🍽️";
-
-    const foodNameLower = foodName.toLowerCase();
-
-    if (foodNameLower.includes("pizza")) return "🍕";
-    if (foodNameLower.includes("salad")) return "🥗";
-    if (foodNameLower.includes("burger") || foodNameLower.includes("hamburger"))
-      return "🍔";
-    if (foodNameLower.includes("rice")) return "🍚";
-    if (foodNameLower.includes("pasta") || foodNameLower.includes("spaghetti"))
-      return "🍝";
-    if (foodNameLower.includes("taco")) return "🌮";
-    if (foodNameLower.includes("burrito")) return "🌯";
-    if (foodNameLower.includes("soup")) return "🍲";
-    if (foodNameLower.includes("sushi")) return "🍣";
-    if (foodNameLower.includes("sandwich")) return "🥪";
-    if (foodNameLower.includes("bread")) return "🍞";
-    if (foodNameLower.includes("cake")) return "🍰";
-    if (foodNameLower.includes("ice cream")) return "🍦";
-    if (foodNameLower.includes("fruit")) return "🍎";
-    if (foodNameLower.includes("vegetable")) return "🥦";
-    if (foodNameLower.includes("meat")) return "🥩";
-    if (foodNameLower.includes("chicken")) return "🍗";
-    if (foodNameLower.includes("fish")) return "🐟";
-
-    // Default to a generic food emoji
-    return "🍲";
-  };
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {scans.map((scan) => (
@@ -160,7 +129,11 @@ export default function RecentScans({ userId }: RecentScansProps) {
           <Card className="h-full cursor-pointer hover:shadow-md transition-shadow duration-300">
             <div className="h-48 overflow-hidden">
               <CachedImage
-                src={scan.imageUrl || ""}
+                src={
+                  scan.imageUrl
+                    ? `${import.meta.env.VITE_API_URL}${scan.imageUrl}`
+                    : ""
+                }
                 alt={scan.foodName || "Food scan"}
                 foodName={scan.foodName}
                 className="w-full h-full"
