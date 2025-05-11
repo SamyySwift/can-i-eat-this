@@ -12,14 +12,26 @@ interface ScanUsageProps {
 }
 
 export default function ScanUsage({ userId }: ScanUsageProps) {
-  // console.log("Scan Usage - User ID:", userId);
+  // Get the auth token from Supabase
+  const getAuthToken = () => {
+    const supabaseAuth = JSON.parse(
+      localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+    );
+    return supabaseAuth?.access_token || "";
+  };
+
   const {
     data: scanLimit,
     isLoading,
     isError,
   } = useQuery<ScanLimit>({
     queryKey: [`/api/scan-limits/${userId}`],
-    queryFn: () => fetchApi(`/api/scan-limits/${userId}`),
+    queryFn: () =>
+      fetchApi(`/api/scan-limits/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      }),
   });
 
   const { data: safetyCounts, isLoading: isCountsLoading } = useQuery<{
@@ -28,7 +40,12 @@ export default function ScanUsage({ userId }: ScanUsageProps) {
     unsafe: number;
   }>({
     queryKey: [`/api/scan-stats/${userId}`],
-    queryFn: () => fetchApi(`/api/scan-stats/${userId}`),
+    queryFn: () =>
+      fetchApi(`/api/scan-stats/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      }),
   });
 
   if (isLoading || isCountsLoading) {

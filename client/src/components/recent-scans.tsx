@@ -27,7 +27,19 @@ export default function RecentScans({ userId }: RecentScansProps) {
     isError,
   } = useQuery<FoodScan[]>({
     queryKey: [`/api/scans/recent/${userId}`],
-    queryFn: () => fetchApi(`/api/scans/recent/${userId}`),
+    queryFn: () => {
+      // Get the auth token from Supabase
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
+      return fetchApi(`/api/scans/recent/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    },
   });
 
   // Preload all scan images when data is loaded
