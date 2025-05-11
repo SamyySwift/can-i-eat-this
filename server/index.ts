@@ -60,3 +60,15 @@ app.use((req, res, next) => {
     console.log(`API server running on port ${port}`);
   });
 })();
+
+// For Vercel serverless deployment
+if (process.env.VERCEL) {
+  // Export the Express app as a serverless function
+  module.exports = app;
+} else {
+  // Start the server normally for local development
+  const PORT = process.env.PORT || 8000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
