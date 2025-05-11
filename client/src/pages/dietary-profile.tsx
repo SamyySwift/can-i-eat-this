@@ -22,10 +22,22 @@ export default function DietaryProfilePage({ auth }: DietaryProfilePageProps) {
   const { isAuthenticated, user } = auth;
   const [showExplainer, setShowExplainer] = useState(true);
 
+  // Get the auth token from Supabase
+  const getAuthToken = () => {
+    const supabaseAuth = JSON.parse(
+      localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+    );
+    return supabaseAuth?.access_token || "";
+  };
+
   // Fetch existing dietary profile if user is authenticated
   const { data: existingProfile, isLoading } = useQuery<DietaryProfile>({
     queryKey: [`/api/dietary-profile/${user?.id}`],
-    queryFn: () => fetchApi(`/api/dietary-profile/${user?.id}`),
+    queryFn: () => fetchApi(`/api/dietary-profile/${user?.id}`, {
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`
+      }
+    }),
     enabled: isAuthenticated,
     staleTime: 30000, // 30 seconds
   });

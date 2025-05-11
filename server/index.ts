@@ -1,15 +1,13 @@
-// index.ts
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import cors from "cors";
 import "dotenv/config";
 
-// Initialize Express
 const app = express();
-
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add CORS middleware
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -17,7 +15,6 @@ app.use(
   })
 );
 
-// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -46,18 +43,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Register routes
-registerRoutes(app);
+(async () => {
+  const server = await registerRoutes(app);
 
-// Error handling
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-  throw err;
-});
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-// ✅ Export the handler for Vercel
-const handler = app;
+    res.status(status).json({ message });
+    throw err;
+  });
 
-export default handler;
+  // ALWAYS serve the API on port 8000
+  const port = process.env.PORT || 8000;
+  server.listen(port, () => {
+    console.log(`API server running on port ${port}`);
+  });
+})();

@@ -13,20 +13,25 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const storage2 = process.env.NODE_ENV === 'production' 
-  ? multer.memoryStorage()
-  : multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, uploadsDir);
-      },
-      filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(
-          null,
-          file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-        );
-      },
-    });
+const storage2 =
+  process.env.NODE_ENV === "production"
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: function (req, file, cb) {
+          cb(null, uploadsDir);
+        },
+        filename: function (req, file, cb) {
+          const uniqueSuffix =
+            Date.now() + "-" + Math.round(Math.random() * 1e9);
+          cb(
+            null,
+            file.fieldname +
+              "-" +
+              uniqueSuffix +
+              path.extname(file.originalname)
+          );
+        },
+      });
 
 const upload = multer({
   storage: storage2,
@@ -45,18 +50,6 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve Supabase credentials
   app.get("/api/supabase-credentials", (req: Request, res: Response) => {
-    // Add some basic security to prevent unauthorized access
-    const referer = req.headers.referer || req.headers.origin;
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:3000',
-      'http://localhost:5173'
-    ];
-    
-    if (!referer || !allowedOrigins.some(origin => referer.startsWith(origin))) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-    
     // Return the credentials stored in environment variables
     res.json({
       supabaseUrl: process.env.SUPABASE_URL,
