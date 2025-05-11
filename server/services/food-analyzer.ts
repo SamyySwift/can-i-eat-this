@@ -143,7 +143,7 @@ async function callOpenRouterAPI(
 ): Promise<string> {
   try {
     const completion = await openai.chat.completions.create({
-      model: "meta-llama/llama-4-maverick:free", // Using Claude 3 Haiku for good image analysis
+      model: "meta-llama/llama-4-maverick:free",
       messages: [
         {
           role: "user",

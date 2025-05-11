@@ -27,6 +27,14 @@ interface ResultDetailsProps {
 export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   const { toast } = useToast();
 
+  // Get the auth token from Supabase
+  const getAuthToken = () => {
+    const supabaseAuth = JSON.parse(
+      localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+    );
+    return supabaseAuth?.access_token || "";
+  };
+
   // Fetch the scan result - note: API returns an array with one item
   const {
     data: scanData,
@@ -34,7 +42,15 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     isError,
   } = useQuery<FoodScan[]>({
     queryKey: [`/api/scans/${scanId}`],
-    queryFn: () => fetchApi(`/api/scans/${scanId}`),
+    queryFn: async () => {
+      const accessToken = getAuthToken();
+      return fetchApi(`/api/scans/${scanId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+      });
+    },
     retry: 2,
     retryDelay: 1000,
   });
@@ -57,7 +73,6 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     }
   }, [scanData, scan]);
 
-  // Fetch safer alternatives
   const { data: alternatives } = useQuery<
     Array<{
       name: string;
@@ -66,7 +81,15 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     }>
   >({
     queryKey: [`/api/food/alternatives/${scanId}`],
-    queryFn: () => fetchApi(`/api/food/alternatives/${scanId}`),
+    queryFn: async () => {
+      const accessToken = getAuthToken();
+      return fetchApi(`/api/food/alternatives/${scanId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+      });
+    },
     enabled: !!scan && scan.isSafe === false,
   });
 
@@ -77,15 +100,28 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     avoidList?: string[];
   }>({
     queryKey: [`/api/food/dietary-info/${scanId}`],
-    queryFn: () => fetchApi(`/api/food/dietary-info/${scanId}`),
+    queryFn: async () => {
+      const accessToken = getAuthToken();
+      return fetchApi(`/api/food/dietary-info/${scanId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+      });
+    },
     enabled: !!scan,
   });
 
   const handleSaveToHistory = async () => {
     try {
+      const accessToken = getAuthToken();
       // In a real implementation, we might want to save additional metadata
       await fetchApi(`/api/scans/${scanId}/save`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
       });
 
       toast({
@@ -185,8 +221,6 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
       return "Recent";
     }
 
-    console.log("Original date string:", dateStr);
-
     try {
       const date = new Date(dateStr);
       // Check if date is valid
@@ -222,7 +256,11 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
               <div className="bg-white rounded-lg overflow-hidden">
                 {/* Use CachedImage component for better performance */}
                 <CachedImage
-                  src={scan?.imageUrl || ""}
+                  src={
+                    scan?.imageUrl
+                      ? `${import.meta.env.VITE_API_URL}${scan.imageUrl}`
+                      : ""
+                  }
                   alt={scan?.foodName || "Food Image"}
                   foodName={scan?.foodName}
                   className="w-full h-64"
