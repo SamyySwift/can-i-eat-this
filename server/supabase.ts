@@ -1,12 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
-import { log } from "./vite";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Environment setup
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  log(
+  console.log(
     "Missing Supabase environment variables, functionality will be limited",
     "supabase"
   );
@@ -29,7 +31,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Test connection
 async function testConnection() {
   try {
-    log(
+    console.log(
       `Testing Supabase connection with URL: ${supabaseUrl.substring(
         0,
         15
@@ -42,12 +44,12 @@ async function testConnection() {
 
     if (error && error.code !== "PGRST116") {
       // PGRST116 is "relation does not exist"
-      log(`Supabase test query error: ${error.message}`, "supabase");
+      console.log(`Supabase test query error: ${error.message}`, "supabase");
       console.error("Supabase error details:", error);
     } else {
-      log("Supabase connection successful", "supabase");
+      console.log("Supabase connection successful", "supabase");
       if (data) {
-        log(`Found ${data.length} user records`, "supabase");
+        console.log(`Found ${data.length} user records`, "supabase");
       }
     }
 
@@ -55,21 +57,21 @@ async function testConnection() {
     try {
       const { data: authData, error: authError } =
         await supabase.auth.getSession();
-      log(
+      console.log(
         `Auth session check: ${authData ? "Session exists" : "No session"}`,
         "supabase"
       );
 
       if (authError) {
-        log(`Auth check error: ${authError.message}`, "supabase");
+        console.log(`Auth check error: ${authError.message}`, "supabase");
         console.error("Auth error details:", authError);
       }
     } catch (authErr) {
-      log(`Auth check exception: ${authErr}`, "supabase");
+      console.log(`Auth check exception: ${authErr}`, "supabase");
       console.error("Auth exception details:", authErr);
     }
   } catch (error) {
-    log(`Supabase connection error: ${error}`, "supabase");
+    console.log(`Supabase connection error: ${error}`, "supabase");
     console.error("Connection exception details:", error);
   }
 }

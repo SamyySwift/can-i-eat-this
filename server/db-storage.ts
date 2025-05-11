@@ -15,7 +15,12 @@ import {
   type InsertScanLimit
 } from "@shared/schema";
 import { IStorage, UserProfile } from './storage';
-import { log } from './vite';
+
+// Add custom logger function
+function logMessage(message: string, category?: string): void {
+  const prefix = category ? `[${category}]` : '';
+  console.log(`${prefix} ${message}`);
+}
 
 export class DbStorage implements IStorage {
   

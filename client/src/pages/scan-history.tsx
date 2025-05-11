@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { 
+import {
   ArrowLeft,
   Search,
   Calendar,
@@ -9,15 +9,10 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -43,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CachedImage from "@/components/cached-image";
 import { preloadImages } from "@/lib/imageCache";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 interface ScanHistoryProps {
   auth: {
@@ -59,51 +55,60 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       setLocation("/login");
     }
   }, [isAuthenticated, setLocation]);
-  
+
   // Fetch scan history
-  const { data: scans, isLoading, isError } = useQuery<FoodScan[]>({
-    queryKey: [`/api/scans/user/${user?.id}`],
+  const {
+    data: scans,
+    isLoading,
+    isError,
+  } = useQuery<FoodScan[]>({
+    queryKey: [`scans-${user?.id}`],
+    queryFn: () => api.get(`/api/scans/user/${user?.id}`),
     enabled: isAuthenticated,
     onSuccess: (data: FoodScan[]) => {
       // Preload all scan images for better performance
       if (data && data.length > 0) {
-        const imagePaths = data.map((scan: FoodScan) => scan.imageUrl || '');
-        preloadImages(imagePaths).catch(err => console.error('Error preloading images:', err));
+        const imagePaths = data.map((scan: FoodScan) => scan.imageUrl || "");
+        preloadImages(imagePaths).catch((err) =>
+          console.error("Error preloading images:", err)
+        );
       }
-    }
+    },
   } as any);
-  
+
   // Delete all scans mutation
   const deleteAllMutation = useMutation({
     mutationFn: async () => {
       // Get the auth token from Supabase
-      const supabaseAuth = JSON.parse(localStorage.getItem('sb-njxfkiparbdkklajlpyp-auth-token') || '{}');
-      const accessToken = supabaseAuth?.access_token || '';
-      
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
       const response = await fetch(`/api/scans/user/${user?.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
-      
+
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to delete all scans');
+          throw new Error(errorData.message || "Failed to delete all scans");
         } catch (parseError) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
       }
-      
+
       try {
         // Try to parse as JSON first
         const text = await response.text();
@@ -115,29 +120,32 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
     },
     onSuccess: () => {
       toast({
-        title: 'All scans deleted',
-        description: 'All your scan history has been successfully deleted',
-        variant: 'default'
+        title: "All scans deleted",
+        description: "All your scan history has been successfully deleted",
+        variant: "default",
       });
-      
+
       // Invalidate query to reload the data
-      queryClient.invalidateQueries({ queryKey: [`/api/scans/user/${user?.id}`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/scans/user/${user?.id}`],
+      });
       setIsDeleteAlertOpen(false);
     },
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete all scans',
-        variant: 'destructive'
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete all scans",
+        variant: "destructive",
       });
       setIsDeleteAlertOpen(false);
-    }
+    },
   });
-  
+
   if (!isAuthenticated) {
     return null;
   }
-  
+
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -145,14 +153,16 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       </div>
     );
   }
-  
+
   if (isError || !scans) {
     return (
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="glass rounded-xl overflow-hidden shadow-lg p-6">
           <div className="text-center">
             <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Failed to Load History</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Failed to Load History
+            </h2>
             <p className="text-gray-600 mb-6">
               We couldn't load your scan history. Please try again later.
             </p>
@@ -164,36 +174,37 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       </div>
     );
   }
-  
+
   // Format date for display
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
-  
+
   // Filter scans
-  const filteredScans = scans.filter(scan => {
+  const filteredScans = scans.filter((scan) => {
     // Filter by search term
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch =
+      searchTerm === "" ||
       scan.foodName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scan.ingredients.some(ingredient => 
+      scan.ingredients.some((ingredient) =>
         ingredient.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    
+
     // Filter by safety status
-    const matchesStatus = 
+    const matchesStatus =
       filterStatus === "all" ||
       (filterStatus === "safe" && scan.isSafe === true) ||
       (filterStatus === "unsafe" && scan.isSafe === false) ||
       (filterStatus === "caution" && scan.isSafe === null);
-    
+
     return matchesSearch && matchesStatus;
   });
-  
+
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
@@ -203,17 +214,22 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
           </Button>
         </Link>
       </div>
-      
+
       <div className="glass rounded-xl overflow-hidden shadow-lg mb-8">
         <div className="px-6 py-8">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Scan History</h1>
-            
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              Scan History
+            </h1>
+
             {scans && scans.length > 0 && (
-              <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+              <AlertDialog
+                open={isDeleteAlertOpen}
+                onOpenChange={setIsDeleteAlertOpen}
+              >
                 <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex items-center gap-2 text-red-500 border-red-200 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" /> Delete All
@@ -221,26 +237,30 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete all your scan history and images.
-                      This action cannot be undone.
+                      This will permanently delete all your scan history and
+                      images. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
+                    <AlertDialogAction
                       onClick={() => deleteAllMutation.mutate()}
                       className="bg-red-500 hover:bg-red-600"
                     >
-                      {deleteAllMutation.isPending ? "Deleting..." : "Delete All"}
+                      {deleteAllMutation.isPending
+                        ? "Deleting..."
+                        : "Delete All"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             )}
           </div>
-          
+
           {/* Filters */}
           <div className="mb-8 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -255,12 +275,9 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex gap-2">
-              <Select
-                value={filterStatus}
-                onValueChange={setFilterStatus}
-              >
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -273,7 +290,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
               </Select>
             </div>
           </div>
-          
+
           {/* Results */}
           {filteredScans.length === 0 ? (
             <div className="text-center py-12">
@@ -284,12 +301,13 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                   <Filter className="h-12 w-12 text-gray-400" />
                 )}
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No matching scans found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                No matching scans found
+              </h3>
               <p className="text-gray-500">
-                {filterStatus === "all" 
-                  ? "You haven't scanned any food items yet." 
-                  : "Try changing your filters or search term."
-                }
+                {filterStatus === "all"
+                  ? "You haven't scanned any food items yet."
+                  : "Try changing your filters or search term."}
               </p>
             </div>
           ) : (
@@ -299,7 +317,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                   <Card className="h-full cursor-pointer hover:shadow-md transition-shadow duration-300">
                     <div className="h-48 overflow-hidden">
                       <CachedImage
-                        src={scan.imageUrl || ''}
+                        src={scan.imageUrl || ""}
                         alt={scan.foodName || "Food image"}
                         foodName={scan.foodName}
                         className="w-full h-full object-cover"
@@ -313,28 +331,45 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                           {scan.foodName}
                         </CardTitle>
                         {scan.isSafe === true ? (
-                          <Badge variant="outline" className="bg-green-100 text-green-800">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-100 text-green-800"
+                          >
                             <CheckCircle className="h-3 w-3 mr-1" /> Safe
                           </Badge>
                         ) : scan.isSafe === false ? (
-                          <Badge variant="outline" className="bg-red-100 text-red-800">
+                          <Badge
+                            variant="outline"
+                            className="bg-red-100 text-red-800"
+                          >
                             <XCircle className="h-3 w-3 mr-1" /> Unsafe
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+                          <Badge
+                            variant="outline"
+                            className="bg-yellow-100 text-yellow-800"
+                          >
                             <AlertTriangle className="h-3 w-3 mr-1" /> Caution
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">Scanned on {formatDate(scan.scannedAt)}</p>
+                      <p className="text-sm text-gray-500">
+                        Scanned on {formatDate(scan.scannedAt)}
+                      </p>
                     </CardHeader>
                     <CardContent className="p-4 pt-2">
                       <div className="flex flex-wrap gap-1 mb-2">
-                        {scan.ingredients.slice(0, 4).map((ingredient, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {ingredient}
-                          </Badge>
-                        ))}
+                        {scan.ingredients
+                          .slice(0, 4)
+                          .map((ingredient, index) => (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {ingredient}
+                            </Badge>
+                          ))}
                         {scan.ingredients.length > 4 && (
                           <Badge variant="secondary" className="text-xs">
                             +{scan.ingredients.length - 4} more
@@ -376,16 +411,16 @@ function ScanHistorySkeleton() {
       <div className="mb-6">
         <Skeleton className="h-10 w-32" />
       </div>
-      
+
       <div className="glass rounded-xl overflow-hidden shadow-lg mb-8">
         <div className="px-6 py-8">
           <Skeleton className="h-10 w-48 mb-6" />
-          
+
           <div className="mb-8 flex flex-col md:flex-row gap-4">
             <Skeleton className="h-10 flex-1" />
             <Skeleton className="h-10 w-[150px]" />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="h-full">

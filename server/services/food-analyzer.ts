@@ -1,5 +1,4 @@
 import { OpenAI } from "openai";
-import { log } from "../vite";
 import fs from "fs";
 import path from "path";
 import { DietaryProfile } from "@shared/schema";
@@ -48,7 +47,7 @@ export async function analyzeFoodImage(
 
     return processAnalysisResponse(analysis, activeRestrictions);
   } catch (error: any) {
-    log(`Error analyzing food image: ${error}`, "food-analyzer");
+    console.log(`Error analyzing food image: ${error}`, "food-analyzer");
     throw new Error(
       `Failed to analyze food image: ${error.message || String(error)}`
     );
@@ -65,7 +64,7 @@ async function imageToBase64(filePath: string): Promise<string> {
     // Convert buffer to base64 string
     return fileBuffer.toString("base64");
   } catch (error: any) {
-    log(`Error converting image to base64: ${error}`, "food-analyzer");
+    console.log(`Error converting image to base64: ${error}`, "food-analyzer");
     throw new Error(
       `Failed to process image: ${error.message || String(error)}`
     );
@@ -165,7 +164,7 @@ async function callOpenRouterAPI(
 
     return completion.choices[0].message.content || "";
   } catch (error: any) {
-    log(`Error calling OpenRouter API: ${error}`, "food-analyzer");
+    console.log(`Error calling OpenRouter API: ${error}`, "food-analyzer");
     throw new Error(
       `Failed to analyze the image: ${error.message || String(error)}`
     );
@@ -213,7 +212,7 @@ function processAnalysisResponse(
         "The AI could not properly analyze this image. Please try again with a clearer photo.",
     };
   } catch (error: any) {
-    log(`Error processing AI response: ${error}`, "food-analyzer");
+    console.log(`Error processing AI response: ${error}`, "food-analyzer");
     return {
       isSafe: false,
       foodName: "Unknown food",

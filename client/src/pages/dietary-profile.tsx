@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import DietaryProfileForm from "@/components/dietary-profile-form";
@@ -8,6 +8,7 @@ import { Info, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { fetchApi } from "@/lib/api"; // Add this import
 
 interface DietaryProfilePageProps {
   auth: {
@@ -24,6 +25,7 @@ export default function DietaryProfilePage({ auth }: DietaryProfilePageProps) {
   // Fetch existing dietary profile if user is authenticated
   const { data: existingProfile, isLoading } = useQuery<DietaryProfile>({
     queryKey: [`/api/dietary-profile/${user?.id}`],
+    queryFn: () => fetchApi(`/api/dietary-profile/${user?.id}`),
     enabled: isAuthenticated,
     staleTime: 30000, // 30 seconds
   });

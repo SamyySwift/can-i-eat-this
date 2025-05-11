@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { fetchApi } from "./api";
 
 // We'll create a function to initialize Supabase later after fetching credentials
 let _supabase: SupabaseClient | null = null;
@@ -9,29 +10,28 @@ let initPromise: Promise<SupabaseClient> | null = null;
 // Function to get the Supabase instance, initializing it if needed
 export async function getSupabase(): Promise<SupabaseClient> {
   if (_supabase) return _supabase;
-  
+
   if (!initPromise) {
     initPromise = initializeSupabase();
   }
-  
+
   return initPromise;
 }
 
 // Function to initialize Supabase with credentials
 async function initializeSupabase(): Promise<SupabaseClient> {
   try {
-    // Fetch credentials from our server endpoint
-    const response = await fetch('/api/supabase-credentials');
-    const data = await response.json();
-    const supabaseUrl = data.supabaseUrl || '';
-    const supabaseAnonKey = data.supabaseAnonKey || '';
-    
-    console.log('Initializing Supabase client with:', { supabaseUrl });
-    
+    // Fetch credentials from our server endpoint using fetchApi from api.ts
+    const data = await fetchApi("/api/supabase-credentials");
+    const supabaseUrl = data.supabaseUrl || "";
+    const supabaseAnonKey = data.supabaseAnonKey || "";
+
+    // console.log('Initializing Supabase client with:', { supabaseUrl });
+
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing Supabase credentials');
+      throw new Error("Missing Supabase credentials");
     }
-    
+
     // Create the client
     _supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -39,29 +39,31 @@ async function initializeSupabase(): Promise<SupabaseClient> {
         autoRefreshToken: true,
       },
       db: {
-        schema: 'public',
+        schema: "public",
       },
     });
-    
+
     return _supabase;
   } catch (error) {
-    console.error('Failed to initialize Supabase:', error);
+    console.error("Failed to initialize Supabase:", error);
     throw error;
   }
 }
 
 // Initialize right away
-initializeSupabase().catch(err => console.error('Failed to initialize Supabase on startup:', err));
+initializeSupabase().catch((err) =>
+  console.error("Failed to initialize Supabase on startup:", err)
+);
 
 // For backward compatibility - create a simpler interface to avoid type errors
 // This is a simplified interface just to make typescript happy
 export const supabase = {
   auth: {
-    signUp: async (params: { email: string, password: string }) => {
+    signUp: async (params: { email: string; password: string }) => {
       const client = await getSupabase();
       return client.auth.signUp(params);
     },
-    signInWithPassword: async (params: { email: string, password: string }) => {
+    signInWithPassword: async (params: { email: string; password: string }) => {
       const client = await getSupabase();
       return client.auth.signInWithPassword(params);
     },
@@ -72,29 +74,29 @@ export const supabase = {
     onAuthStateChange: (callback: (event: string, session: any) => void) => {
       // This is a special case because it returns a subscription
       let unsubscribeFn = () => {};
-      
+
       // We need to make sure Supabase is initialized first
-      getSupabase().then(client => {
+      getSupabase().then((client) => {
         const { data } = client.auth.onAuthStateChange(callback);
         if (data && data.subscription && data.subscription.unsubscribe) {
           unsubscribeFn = data.subscription.unsubscribe;
         }
       });
-      
+
       // Return a dummy subscription object with the unsubscribe function
       // that will be replaced once Supabase is initialized
-      return { 
-        data: { 
-          subscription: { 
-            unsubscribe: () => unsubscribeFn() 
-          } 
-        } 
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => unsubscribeFn(),
+          },
+        },
       };
     },
     getUser: async () => {
       const client = await getSupabase();
       return client.auth.getUser();
-    }
+    },
   },
   from: (table: string) => ({
     select: async (query: string) => {
@@ -112,8 +114,8 @@ export const supabase = {
     delete: async () => {
       const client = await getSupabase();
       return client.from(table).delete();
-    }
-  })
+    },
+  }),
 };
 
 export default supabase;
