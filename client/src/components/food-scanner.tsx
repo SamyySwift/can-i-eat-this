@@ -113,8 +113,10 @@ export default function FoodScanner({
         },
       });
 
+      // console.log(data);
+
       // Redirect to the result page
-      if (data && data.scanId) {
+      if (data.foodName !== "Processing..." && data.scanId) {
         setLocation(`/result/${data.scanId}`);
       } else {
         throw new Error("No scan ID returned from server");
@@ -142,7 +144,7 @@ export default function FoodScanner({
         className="hidden"
         capture="environment"
       />
-      
+
       {/* File upload input (without capture attribute) */}
       <input
         type="file"

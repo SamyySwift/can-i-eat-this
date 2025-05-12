@@ -104,7 +104,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       );
       const accessToken = supabaseAuth?.access_token || "";
 
-      const response = await fetchApi(`/api/scans/user/${user?.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/scans/user/${user?.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -113,22 +113,20 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
         try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to delete all scans");
-        } catch (parseError) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || "Failed to delete all scans";
+        } catch (e) {
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
+        throw new Error(errorMessage);
       }
 
-      try {
-        // Try to parse as JSON first
-        const text = await response.text();
-        return text.trim() ? JSON.parse(text) : { success: true };
-      } catch (e) {
-        // If parsing fails, still consider it a success if the status was OK
-        return { success: true };
-      }
+      // Parse the response
+      const text = await response.text();
+      return text ? JSON.parse(text) : { success: true };
     },
     onSuccess: () => {
       toast({
@@ -139,7 +137,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
 
       // Invalidate query to reload the data
       queryClient.invalidateQueries({
-        queryKey: [`/api/scans/user/${user?.id}`],
+        queryKey: [`scans-${user?.id}`],
       });
       setIsDeleteAlertOpen(false);
     },

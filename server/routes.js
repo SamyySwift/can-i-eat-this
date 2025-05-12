@@ -529,21 +529,36 @@ async function registerRoutes(app) {
         // Only delete files if scans were deleted
         if (result.count > 0) {
           const uploadsDir = path.join(process.cwd(), "uploads");
-          const files = fs.readdirSync(uploadsDir);
-
-          // Look for files that belong to this user (prefixed with userId)
-          const userFiles = files.filter(
-            (file) =>
-              file.startsWith(`${userId}-`) || file.includes(`-${userId}-`)
-          );
-          console.log(`🗑️ Found ${userFiles.length} image files to delete`);
-
-          // Delete each file
-          userFiles.forEach((file) => {
-            const filePath = path.join(uploadsDir, file);
-            fs.unlinkSync(filePath);
-            console.log(`🗑️ Deleted image file: ${file}`);
-          });
+          
+          // Check if uploads directory exists
+          if (fs.existsSync(uploadsDir)) {
+            const files = fs.readdirSync(uploadsDir);
+            let deletedFiles = 0;
+            
+            // Get all scans for this user to find their image URLs
+            const userScans = await storage.getFoodScansByUserId(userId);
+            const imageUrls = userScans
+              .filter(scan => scan.imageUrl)
+              .map(scan => {
+                // Extract just the filename from the imageUrl
+                const urlParts = scan.imageUrl.split('/');
+                return urlParts[urlParts.length - 1];
+              });
+              
+            console.log(`🗑️ Found ${imageUrls.length} image URLs to delete`);
+            
+            // Delete each file that matches an image URL
+            for (const file of files) {
+              if (imageUrls.includes(file)) {
+                const filePath = path.join(uploadsDir, file);
+                fs.unlinkSync(filePath);
+                deletedFiles++;
+                console.log(`🗑️ Deleted image file: ${file}`);
+              }
+            }
+            
+            console.log(`🗑️ Deleted ${deletedFiles} image files`);
+          }
         }
       } catch (fileError) {
         console.error("Error deleting image files:", fileError);
