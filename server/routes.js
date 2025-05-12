@@ -457,36 +457,6 @@ async function registerRoutes(app) {
     }
   );
 
-  // Get scan result
-  app.get("/api/scan/:scanId", authMiddleware, async (req, res) => {
-    try {
-      const scanId = req.params.scanId;
-      const userId = req.user?.id;
-
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const scan = await storage.getFoodScan(scanId);
-
-      if (!scan) {
-        return res.status(404).json({ message: "Scan not found" });
-      }
-
-      // Ensure user can only access their own scans
-      if (scan.userId !== userId) {
-        return res.status(403).json({
-          message: "Forbidden - You can only access your own scans",
-        });
-      }
-
-      res.status(200).json(scan);
-    } catch (error) {
-      console.error("Get scan error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
   // Handle /api/scans to return all scans for authenticated user
   app.get("/api/scans", authMiddleware, async (req, res) => {
     try {

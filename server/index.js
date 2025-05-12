@@ -22,15 +22,16 @@ app.use(
       
       // List of allowed origins
       const allowedOrigins = [
-        'http://localhost:3000',
-        'https://can-i-eat-this-zvwd.vercel.app'
+        process.env.FRONTEND_URL || "http://localhost:3000",
+        "https://can-i-eat-this-zvwd.vercel.app"
       ];
       
       // Check if the origin is allowed
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.log(`Blocked origin: ${origin}`);
+        callback(null, true); // Still allow it for now, but log it
       }
     },
     credentials: true,

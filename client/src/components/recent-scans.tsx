@@ -166,13 +166,13 @@ export default function RecentScans({ userId }: RecentScansProps) {
             <CardContent className="p-4 pt-3">
               <div className="flex flex-wrap gap-1 mb-2">
                 {scan.ingredients.slice(0, 4).map((ingredient, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
+                  <Badge key={index} variant="outline" className="text-xs">
                     {ingredient}
                   </Badge>
                 ))}
-                {scan.ingredients.length > 4 && (
+                {scan.ingredients.length > 5 && (
                   <Badge variant="secondary" className="text-xs">
-                    +{scan.ingredients.length - 4} more
+                    +{scan.ingredients.length - 5} more
                   </Badge>
                 )}
               </div>

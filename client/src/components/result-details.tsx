@@ -41,15 +41,27 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     isLoading,
     isError,
   } = useQuery<FoodScan[]>({
-    queryKey: [`/api/scans/${scanId}`],
+    queryKey: [`scan-${scanId}`],
     queryFn: async () => {
       const accessToken = getAuthToken();
-      return fetchApi(`/api/scans/${scanId}`, {
+
+      // Make sure we're using the correct API endpoint format
+      const response = await fetchApi(`/api/scans/${scanId}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
         credentials: "include",
       });
+
+      console.log("Scan API response:", response);
+
+      // If the response is empty or not an array, wrap it in an array
+      if (!response || !Array.isArray(response)) {
+        console.warn("Response is not an array, wrapping:", response);
+        return response ? [response] : [];
+      }
+
+      return response;
     },
     retry: 2,
     retryDelay: 1000,
@@ -258,7 +270,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                 <CachedImage
                   src={
                     scan?.imageUrl
-                      ? `${import.meta.env.VITE_API_URL || ''}${scan.imageUrl}`
+                      ? `${import.meta.env.VITE_API_URL || ""}${scan.imageUrl}`
                       : ""
                   }
                   alt={scan?.foodName || "Food Image"}

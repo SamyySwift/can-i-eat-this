@@ -103,7 +103,7 @@ export default function FoodScanner({
       const accessToken = supabaseAuth?.access_token || "";
 
       // Upload the image with authorization header
-      const response = await fetchApi("/api/scan/upload", {
+      const data = await fetchApi("/api/scan/upload", {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -112,16 +112,12 @@ export default function FoodScanner({
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to upload image");
-      }
-
-      const data = await response.json();
-      console.log(data);
-
       // Redirect to the result page
-      setLocation(`/result/${data.scanId}`);
+      if (data && data.scanId) {
+        setLocation(`/result/${data.scanId}`);
+      } else {
+        throw new Error("No scan ID returned from server");
+      }
     } catch (error) {
       toast({
         title: "Upload Failed",

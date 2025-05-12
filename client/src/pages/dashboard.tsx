@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -13,6 +12,7 @@ import FoodScanner from "@/components/food-scanner";
 import RecentScans from "@/components/recent-scans";
 import ScanUsage from "@/components/scan-usage";
 import { DietaryProfile, ScanLimit } from "@/types";
+import { fetchApi } from "@/lib/api"; // Import the fetchApi function
 
 interface HomeProps {
   auth: {
@@ -24,15 +24,33 @@ interface HomeProps {
 export default function Dashboard({ auth }: HomeProps) {
   const { isAuthenticated, user } = auth;
 
+  // Get the auth token from Supabase
+  const getAuthToken = () => {
+    const supabaseAuth = JSON.parse(
+      localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+    );
+    return supabaseAuth?.access_token || "";
+  };
+
   // Fetch dietary profile if user is authenticated
   const { data: dietaryProfile } = useQuery<DietaryProfile>({
     queryKey: [`/api/dietary-profile/${user?.id}`],
+    queryFn: () => fetchApi(`/api/dietary-profile/${user?.id}`, {
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`
+      }
+    }),
     enabled: isAuthenticated,
   });
 
   // Fetch scan limits if user is authenticated
   const { data: scanLimit } = useQuery<ScanLimit>({
     queryKey: [`/api/scan-limits/${user?.id}`],
+    queryFn: () => fetchApi(`/api/scan-limits/${user?.id}`, {
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`
+      }
+    }),
     enabled: isAuthenticated,
   });
 
