@@ -206,8 +206,8 @@ function Router() {
           />
           <Route
             path="/result/:id"
-            component={(params: { id?: string }) => {
-              const scanId = params?.id || "";
+            component={(props) => {
+              const scanId = props.params.id || "";
               return authContextValue.isAuthenticated ? (
                 <Result auth={authContextValue} scanId={scanId} />
               ) : (

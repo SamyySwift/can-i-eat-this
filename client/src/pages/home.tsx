@@ -54,10 +54,10 @@ export default function Home({ auth }: HomeProps) {
                 Get Started <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            <Link>
+            <Link href="/about">
               <Button
                 size="lg"
-                className="bg-border  bg-green-600 border-white hover:text-black text-white rounded-full hover:bg-gray-100 px-8 py-6 text-lg"
+                className="bg-border bg-green-600 border-white hover:text-black text-white rounded-full hover:bg-gray-100 px-8 py-6 text-lg"
               >
                 Learn More
               </Button>
