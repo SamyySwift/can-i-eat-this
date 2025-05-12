@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchApi } from "@/lib/api";
 
 const dietaryProfileSchema = z.object({
   allergies: z.array(z.string()).optional(),
@@ -224,12 +225,14 @@ export default function DietaryProfileForm({
     setIsSubmitting(true);
 
     const requestBody = {
+      userId: userId,
       allergies: values.allergies || [],
       dietaryPreferences: values.dietaryPreferences || [],
       healthRestrictions: values.healthRestrictions || [],
     };
 
-    const queryKey = [`/api/dietary-profile/${userId}`];
+    // Use the correct query key that matches your API endpoint structure
+    const queryKey = [`/api/dietary-profile`];
     const previousData =
       queryClient.getQueryData<DietaryProfileFormValues>(queryKey);
 
@@ -238,17 +241,35 @@ export default function DietaryProfileForm({
       ...requestBody,
     });
 
-    toast({
-      title: "Profile Updated",
-      description: "Your dietary profile has been updated.",
-      duration: 3000,
-    });
-
     try {
-      await apiRequest("POST", "/api/dietary-profile", requestBody);
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
+      const data = await fetchApi("/api/dietary-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(requestBody),
+        credentials: "include",
+      });
+
+      console.log("Dietary profile saved:", data);
+
+      toast({
+        title: "Profile Updated",
+        description: "Your dietary profile has been updated.",
+        duration: 3000,
+      });
+
+      // Invalidate the query to refresh data
       queryClient.invalidateQueries({ queryKey });
       onComplete();
     } catch (error) {
+      console.error("Error saving dietary profile:", error);
       if (previousData) {
         queryClient.setQueryData(queryKey, previousData);
       }
@@ -321,10 +342,10 @@ export default function DietaryProfileForm({
                       });
                     }}
                     className={cn(
-                      "flex items-center space-x-3 py-4 px-8 rounded-full cursor-pointer transition-all duration-500 shadow-sm border",
+                      "flex items-center space-x-3 py-2 px-8 rounded-full cursor-pointer transition-all duration-500 shadow-sm border",
                       isSelected
                         ? `bg-gradient-to-r ${gradientColor} text-white border-transparent`
-                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gradient-to-r hover:from-green-300 hover:to-gray-200"
+                        : "bg-white border-gray-200 hover:border-gray-300 md:hover:bg-gradient-to-r md:hover:from-green-300 hover:to-gray-200"
                     )}
                   >
                     <div className="flex-1">

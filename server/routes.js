@@ -82,12 +82,18 @@ async function registerRoutes(app) {
       const user = await storage.createUser({ email, password });
 
       // Create a default scan limit for the user
-      await storage.createScanLimit({
-        userId: user.id,
-        scansUsed: 0,
-        maxScans: 10,
-        resetDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-      });
+      try {
+        await storage.createScanLimit({
+          userId: user.id,
+          scansUsed: 0,
+          maxScans: 10,
+          resetDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        });
+        console.log("Created or updated scan limit for user:", userId);
+      } catch (err) {
+        // Log the error but continue - this is not a critical failure
+        console.error("Warning: Issue with scan limit:", err.message);
+      }
 
       // Return user data (excluding password)
       const { password: _, ...userData } = user;
@@ -383,6 +389,36 @@ async function registerRoutes(app) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+  //user update profile route
+  app.put("/api/users/:userId/profile", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.params.userId; // Don't parse as int, keep as string
+      const { name, phone, emergencyName, emergencyRelation, emergencyPhone } =
+        req.body;
+
+      console.log("Update profile - params userId:", userId);
+      console.log("Update profile - auth user:", req.user?.id);
+
+      // Ensure user can only update their own profile
+      if (req.user?.id !== userId) {
+        console.log("User ID mismatch:", req.user?.id, "vs", userId);
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const updatedProfile = await storage.updateUserProfile(userId, {
+        name,
+        phone,
+        emergencyName,
+        emergencyRelation,
+        emergencyPhone,
+      });
+
+      res.status(200).json(updatedProfile);
+    } catch (error) {
+      console.error("Update user profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
   // Food scan routes
   app.post(
     "/api/scan/upload",
@@ -529,24 +565,24 @@ async function registerRoutes(app) {
         // Only delete files if scans were deleted
         if (result.count > 0) {
           const uploadsDir = path.join(process.cwd(), "uploads");
-          
+
           // Check if uploads directory exists
           if (fs.existsSync(uploadsDir)) {
             const files = fs.readdirSync(uploadsDir);
             let deletedFiles = 0;
-            
+
             // Get all scans for this user to find their image URLs
             const userScans = await storage.getFoodScansByUserId(userId);
             const imageUrls = userScans
-              .filter(scan => scan.imageUrl)
-              .map(scan => {
+              .filter((scan) => scan.imageUrl)
+              .map((scan) => {
                 // Extract just the filename from the imageUrl
-                const urlParts = scan.imageUrl.split('/');
+                const urlParts = scan.imageUrl.split("/");
                 return urlParts[urlParts.length - 1];
               });
-              
+
             console.log(`🗑️ Found ${imageUrls.length} image URLs to delete`);
-            
+
             // Delete each file that matches an image URL
             for (const file of files) {
               if (imageUrls.includes(file)) {
@@ -556,7 +592,7 @@ async function registerRoutes(app) {
                 console.log(`🗑️ Deleted image file: ${file}`);
               }
             }
-            
+
             console.log(`🗑️ Deleted ${deletedFiles} image files`);
           }
         }
