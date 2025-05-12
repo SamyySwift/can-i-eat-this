@@ -327,11 +327,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                   <Card className="h-full cursor-pointer hover:shadow-md transition-shadow duration-300">
                     <div className="h-48 overflow-hidden">
                       <CachedImage
-                        src={
-                          scan.imageUrl
-                            ? `${import.meta.env.VITE_API_URL}${scan.imageUrl}`
-                            : ""
-                        }
+                        src={scan.imageUrl || ""}
                         alt={scan.foodName || "Food image"}
                         foodName={scan.foodName}
                         className="w-full h-full object-cover"

@@ -268,11 +268,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
               <div className="bg-white rounded-lg overflow-hidden">
                 {/* Use CachedImage component for better performance */}
                 <CachedImage
-                  src={
-                    scan?.imageUrl
-                      ? `${import.meta.env.VITE_API_URL || ""}${scan.imageUrl}`
-                      : ""
-                  }
+                  src={scan?.imageUrl || ""}
                   alt={scan?.foodName || "Food Image"}
                   foodName={scan?.foodName}
                   className="w-full h-64"

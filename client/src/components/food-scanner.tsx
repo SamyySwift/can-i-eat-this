@@ -113,8 +113,6 @@ export default function FoodScanner({
         },
       });
 
-      // console.log(data);
-
       // Redirect to the result page
       if (data && data.scanId) {
         setLocation(`/result/${data.scanId}`);

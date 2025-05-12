@@ -40,8 +40,8 @@ app.use(
   })
 );
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// We no longer need to serve static files from the uploads directory
+// since we're using Supabase Storage
 
 app.use((req, res, next) => {
   const start = Date.now();

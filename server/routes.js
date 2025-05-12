@@ -5,6 +5,7 @@ import { authMiddleware } from "./middleware/auth.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { supabase } from "./supabase.js";
 
 // Configure multer for file uploads
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -12,25 +13,8 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const storage2 =
-  process.env.NODE_ENV === "production"
-    ? multer.memoryStorage()
-    : multer.diskStorage({
-        destination: function (req, file, cb) {
-          cb(null, uploadsDir);
-        },
-        filename: function (req, file, cb) {
-          const uniqueSuffix =
-            Date.now() + "-" + Math.round(Math.random() * 1e9);
-          cb(
-            null,
-            file.fieldname +
-              "-" +
-              uniqueSuffix +
-              path.extname(file.originalname)
-          );
-        },
-      });
+// Use memory storage for all environments since we'll be uploading to Supabase
+const storage2 = multer.memoryStorage();
 
 const upload = multer({
   storage: storage2,
@@ -459,23 +443,40 @@ async function registerRoutes(app) {
           });
         }
 
-        // Get the file path or buffer
-        const imagePath = req.file.path;
-        const imageBuffer = req.file.buffer;
+        // Get the file buffer and prepare the file path
+        const fileBuffer = req.file.buffer;
+        const fileExt = path.extname(req.file.originalname);
+        const fileName = `${Date.now()}-${Math.round(
+          Math.random() * 1e9
+        )}${fileExt}`;
+        const filePath = `food-scans/${userId}/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("food-images")
+          .upload(filePath, fileBuffer);
+
+        if (uploadError) {
+          console.error("Supabase storage upload error:", uploadError);
+          return res
+            .status(500)
+            .json({ message: "Failed to upload image to storage" });
+        }
+
+        // Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from("food-images")
+          .getPublicUrl(filePath);
+
+        const imageUrl = publicUrlData.publicUrl;
 
         // Analyze the food image
         const analysisResult = await analyzeFoodImage({
           userId,
-          imagePath,
-          imageBuffer,
+          imageBuffer: fileBuffer,
         });
 
-        // Create a relative URL for the image
-        const imageUrl = req.file.path
-          ? `/uploads/${path.basename(req.file.path)}`
-          : null;
-
-        // Save the scan to the database
+        // Save the scan to the database with the Supabase URL
         const scan = await storage.createFoodScan({
           userId,
           foodName: analysisResult.foodName,
@@ -484,7 +485,8 @@ async function registerRoutes(app) {
           isSafe: analysisResult.isSafe,
           safetyReason: analysisResult.safetyReason,
           unsafeReasons: analysisResult.unsafeReasons || [],
-          description: analysisResult.description || "No detailed description provided.",
+          description:
+            analysisResult.description || "No detailed description provided.",
         });
 
         // Increment the user's scan count
@@ -547,76 +549,60 @@ async function registerRoutes(app) {
   // Delete all scans for a user
   app.delete("/api/scans/user/:userId", authMiddleware, async (req, res) => {
     try {
-      // Get the user ID from the parameter
       const userId = req.params.userId;
-      console.log("🗑️ Attempting to delete all scans for user:", userId);
 
       // Ensure user can only delete their own scans
       if (req.user?.id !== userId) {
-        console.log(
-          "🗑️ Forbidden: User ID mismatch when attempting to delete scans"
-        );
-        return res
-          .status(403)
-          .json({ message: "Forbidden: You can only delete your own scans" });
+        return res.status(403).json({
+          message: "Forbidden - You can only delete your own scans",
+        });
       }
 
-      // Delete all scans from storage
-      const result = await storage.deleteAllScansByUserId(userId);
-      console.log(
-        `🗑️ Deleted ${result.count} scans from database for user ${userId}`
-      );
-
-      // Also delete the image files from the uploads folder
-      try {
-        // Only delete files if scans were deleted
-        if (result.count > 0) {
-          const uploadsDir = path.join(process.cwd(), "uploads");
-
-          // Check if uploads directory exists
-          if (fs.existsSync(uploadsDir)) {
-            const files = fs.readdirSync(uploadsDir);
-            let deletedFiles = 0;
-
-            // Get all scans for this user to find their image URLs
-            const userScans = await storage.getFoodScansByUserId(userId);
-            const imageUrls = userScans
-              .filter((scan) => scan.imageUrl)
-              .map((scan) => {
-                // Extract just the filename from the imageUrl
-                const urlParts = scan.imageUrl.split("/");
-                return urlParts[urlParts.length - 1];
-              });
-
-            console.log(`🗑️ Found ${imageUrls.length} image URLs to delete`);
-
-            // Delete each file that matches an image URL
-            for (const file of files) {
-              if (imageUrls.includes(file)) {
-                const filePath = path.join(uploadsDir, file);
-                fs.unlinkSync(filePath);
-                deletedFiles++;
-                console.log(`🗑️ Deleted image file: ${file}`);
+      // First, get all scans for this user to collect image URLs
+      const userScans = await storage.getFoodScansByUserId(userId);
+      
+      // Delete images from Supabase storage
+      if (userScans && userScans.length > 0) {
+        console.log(`Deleting ${userScans.length} scans for user ${userId}`);
+        
+        for (const scan of userScans) {
+          if (scan.imageUrl) {
+            try {
+              // Extract the file path from the URL using the URL object
+              const url = new URL(scan.imageUrl);
+              const fullPath = url.pathname.split(
+                "/storage/v1/object/public/food-images/"
+              )[1];
+              
+              if (fullPath) {
+                console.log(`Deleting image: ${fullPath}`);
+                const { data, error } = await supabase.storage
+                  .from("food-images")
+                  .remove([fullPath]);
+                
+                if (error) {
+                  console.error(`Error deleting image ${fullPath}:`, error);
+                } else {
+                  console.log(`Successfully deleted image: ${fullPath}`);
+                }
               }
+            } catch (imgError) {
+              console.error(`Error processing image URL ${scan.imageUrl}:`, imgError);
+              // Continue with other images even if one fails
             }
-
-            console.log(`🗑️ Deleted ${deletedFiles} image files`);
           }
         }
-      } catch (fileError) {
-        console.error("Error deleting image files:", fileError);
-        // Continue even if there was an error with files - we still deleted the DB records
       }
 
-      return res.status(200).json({
-        message: `Successfully deleted ${result.count} scan(s)`,
-        count: result.count,
+      // Now delete all scans from the database
+      const result = await storage.deleteAllScansByUserId(userId);
+      res.status(200).json({ 
+        message: "All scans deleted successfully", 
+        count: result.count || userScans.length 
       });
     } catch (error) {
-      console.error("Error deleting food scans:", error);
-      return res
-        .status(500)
-        .json({ message: "Internal server error when deleting scans" });
+      console.error("Delete all scans error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
