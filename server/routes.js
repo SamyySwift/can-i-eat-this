@@ -426,69 +426,76 @@ async function registerRoutes(app) {
     upload.single("image"),
     async (req, res) => {
       try {
-        const userId = req.user?.id;
-
-        if (!userId) {
-          return res.status(401).json({ message: "Not authenticated" });
-        }
+        const { userId } = req.body;
 
         if (!req.file) {
-          return res.status(400).json({ message: "No image file uploaded" });
+          return res.status(400).json({ message: "No image uploaded" });
         }
 
-        // Get user's scan limit
-        const scanLimit = await storage.getScanLimitByUserId(userId);
+        if (!userId) {
+          return res.status(400).json({ message: "User ID is required" });
+        }
 
-        if (!scanLimit) {
-          // Create a default scan limit if it doesn't exist
-          await storage.createScanLimit({
-            userId,
-            scansUsed: 0,
-            maxScans: 10,
-            resetDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-          });
-        } else if (scanLimit.scansUsed >= scanLimit.maxScans) {
+        // Ensure user can only upload for themselves
+        if (req.user?.id !== userId) {
           return res.status(403).json({
-            message:
-              "Monthly scan limit reached. Upgrade to continue scanning.",
+            message: "Forbidden - You can only upload for your own account",
+          });
+        }
+
+        // Check if user has reached scan limit
+        const scanLimit = await storage.getScanLimitByUserId(userId);
+        if (scanLimit && scanLimit.scansUsed >= scanLimit.maxScans) {
+          return res.status(403).json({
+            message: "You have reached your monthly scan limit",
           });
         }
 
         // Get user's dietary profile
         const dietaryProfile = await storage.getDietaryProfileByUserId(userId);
-
         if (!dietaryProfile) {
           return res.status(400).json({
             message: "Please set up your dietary profile before scanning food",
           });
         }
 
-        // Process the image
+        // Get the file path or buffer
         const imagePath = req.file.path;
-        const imageBuffer = req.file.buffer; // For memory storage
+        const imageBuffer = req.file.buffer;
 
-        // Create a food scan record
-        const scan = await storage.createFoodScan({
-          userId,
-          foodName: "Processing...",
-          ingredients: [],
-          isSafe: null,
-        });
-
-        // Return the scan ID immediately so the client can poll for results
-        res.status(200).json({ scanId: scan.id });
-
-        // Process the image asynchronously
-        analyzeFoodImage({
+        // Analyze the food image
+        const analysisResult = await analyzeFoodImage({
           userId,
           imagePath,
           imageBuffer,
-        }).catch((error) => {
-          console.error("Error analyzing food image:", error);
         });
+
+        // Create a relative URL for the image
+        const imageUrl = req.file.path
+          ? `/uploads/${path.basename(req.file.path)}`
+          : null;
+
+        // Save the scan to the database
+        const scan = await storage.createFoodScan({
+          userId,
+          foodName: analysisResult.foodName,
+          imageUrl,
+          ingredients: analysisResult.ingredients,
+          isSafe: analysisResult.isSafe,
+          safetyReason: analysisResult.safetyReason,
+          unsafeReasons: analysisResult.unsafeReasons || [],
+          description: analysisResult.description || "No detailed description provided.",
+        });
+
+        // Increment the user's scan count
+        await storage.incrementScanCount(userId);
+
+        res.status(201).json({ scanId: scan.id });
       } catch (error) {
         console.error("Scan upload error:", error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({
+          message: error.message || "Failed to process the food scan",
+        });
       }
     }
   );

@@ -1,25 +1,28 @@
 import { storage } from "../storage.js";
-import OpenAI from "openai";
+import { OpenAI } from "openai";
 import fs from "fs";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize OpenAI client
+// Initialize OpenAI with OpenRouter configuration
 const openai = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 /**
- * Analyzes a food image to determine if it's safe to eat based on user's dietary profile
+ * Analyzes a food image and checks against user dietary restrictions
+ * @param {Object} options - The options object
+ * @param {string} options.userId - The user ID
+ * @param {string} options.imagePath - The path to the uploaded image (for disk storage)
+ * @param {Buffer} options.imageBuffer - The image buffer (for memory storage)
+ * @returns {Promise<Object>} Analysis result with safety information
  */
 async function analyzeFoodImage(options) {
   const { userId, imagePath, imageBuffer } = options;
 
   try {
-    console.log(`Analyzing food image for user ${userId}`);
-
     // Get user's dietary profile
     const dietaryProfile = await storage.getDietaryProfileByUserId(userId);
 
@@ -29,67 +32,128 @@ async function analyzeFoodImage(options) {
         foodName: "Unknown Food",
         ingredients: [],
         isSafe: null,
-        safetyReason:
-          "No dietary profile found. Please set up your dietary profile first.",
+        safetyReason: "No dietary profile found. Please set up your dietary profile first.",
+        unsafeReasons: [],
+        description: "No dietary profile found. Please set up your dietary profile first."
       };
     }
 
-    // Prepare the image for analysis
-    let imageData;
-
+    // Convert image to base64
+    let base64Image;
     if (imageBuffer) {
       // If we have the image buffer (e.g., from memory storage in production)
-      imageData = imageBuffer.toString("base64");
+      base64Image = imageBuffer.toString("base64");
     } else if (imagePath) {
       // If we have the image path (e.g., from disk storage in development)
-      imageData = fs.readFileSync(imagePath, { encoding: "base64" });
+      base64Image = await imageToBase64(imagePath);
     } else {
       throw new Error("No image data provided");
     }
 
-    // Prepare the dietary restrictions for the prompt
-    const allergies = dietaryProfile.allergies || [];
-    const dietaryPreferences = dietaryProfile.dietaryPreferences || [];
-    const healthRestrictions = dietaryProfile.healthRestrictions || [];
-
-    // Combine all restrictions
-    const allRestrictions = [
-      ...allergies.map((a) => `Allergy: ${a}`),
-      ...dietaryPreferences.map((p) => `Dietary Preference: ${p}`),
-      ...healthRestrictions.map((r) => `Health Restriction: ${r}`),
+    // Get active restrictions from dietary profile
+    const activeRestrictions = [
+      ...(dietaryProfile.allergies || []),
+      ...(dietaryProfile.dietaryPreferences || []),
+      ...(dietaryProfile.healthRestrictions || []),
     ];
 
-    const restrictionsText =
-      allRestrictions.length > 0
-        ? `The user has the following dietary restrictions:\n${allRestrictions.join(
-            "\n"
-          )}`
-        : "The user has no specific dietary restrictions.";
+    // Create prompt for the AI
+    const prompt = createAnalysisPrompt(activeRestrictions);
 
-    // Create the prompt for the AI
-    const prompt = `
-You are a food safety expert analyzing a food image. Your task is to:
-1. Identify the food in the image
-2. List the likely ingredients
-3. Determine if the food is safe for the user to eat based on their dietary restrictions
-4. Provide a brief explanation for your safety determination
+    // Call OpenRouter API using OpenAI SDK
+    const analysis = await callOpenRouterAPI(base64Image, prompt);
 
-${restrictionsText}
-
-Respond in the following JSON format:
-{
-  "foodName": "Name of the food",
-  "ingredients": ["ingredient1", "ingredient2", ...],
-  "isSafe": true/false/null,
-  "safetyReason": "Brief explanation of safety determination",
-  "unsafeReasons": ["reason1", "reason2", ...] (only if isSafe is false)
+    return processAnalysisResponse(analysis, activeRestrictions);
+  } catch (error) {
+    console.log(`Error analyzing food image: ${error}`, "food-analyzer");
+    throw new Error(`Failed to analyze food image: ${error.message || String(error)}`);
+  }
 }
 
-If you cannot identify the food or determine safety with confidence, set isSafe to null.
-`;
+/**
+ * Converts an image file to base64
+ */
+async function imageToBase64(filePath) {
+  try {
+    // Read the file as a buffer
+    const fileBuffer = fs.readFileSync(filePath);
+    // Convert buffer to base64 string
+    return fileBuffer.toString("base64");
+  } catch (error) {
+    console.log(`Error converting image to base64: ${error}`, "food-analyzer");
+    throw new Error(`Failed to process image: ${error.message || String(error)}`);
+  }
+}
 
-    // Call the AI to analyze the image
-    const response = await openai.chat.completions.create({
+/**
+ * Maps food restrictions to more detailed descriptions
+ */
+const RESTRICTION_DETAILS = {
+  // Allergies
+  peanuts: "peanuts and peanut derivatives",
+  "tree-nuts": "tree nuts like almonds, walnuts, cashews",
+  dairy: "milk, cheese, yogurt, and other dairy products",
+  eggs: "eggs and egg-derived ingredients",
+  fish: "fish and fish-derived ingredients",
+  shellfish: "shellfish like shrimp, crab, lobster",
+  soy: "soy and soy-derived products",
+  wheat: "wheat and wheat-derived products",
+
+  // Dietary preferences
+  vegetarian: "meat, including beef, pork, poultry",
+  vegan: "all animal products including meat, dairy, eggs, honey",
+  pescatarian: "meat excluding fish and seafood",
+  halal: "non-halal meat, alcohol, and certain food additives",
+  kosher: "non-kosher meat, shellfish, certain food combinations",
+  "gluten-free": "wheat, barley, rye, and other gluten-containing grains",
+
+  // Health restrictions
+  "low-sodium": "high-sodium ingredients and foods",
+  "low-sugar": "high-sugar ingredients and foods",
+  "low-carb": "high-carbohydrate foods like pasta, bread, potatoes",
+  "low-fat": "high-fat ingredients and foods",
+  "low-cholesterol": "high-cholesterol foods like egg yolks, organ meats",
+  "low-calorie": "high-calorie dense foods",
+  "kidney-disease": "high-phosphorus, high-potassium, and high-sodium foods",
+  diabetes: "high glycemic index foods and added sugars",
+};
+
+/**
+ * Creates a prompt for the AI based on user restrictions
+ */
+function createAnalysisPrompt(activeRestrictions) {
+  const restrictionsText =
+    activeRestrictions.length > 0
+      ? `The user has the following dietary restrictions: ${activeRestrictions
+          .map((r) => `"${r}" (must avoid ${RESTRICTION_DETAILS[r] || r})`)
+          .join(", ")}.`
+      : "The user has no specific dietary restrictions.";
+
+  return `
+    Analyze this food image and provide the following information:
+    1. What food item(s) are in the image?
+    2. List all identifiable ingredients.
+    3. ${restrictionsText}
+    4. Is this food safe for the user to eat based on their restrictions?
+    5. If not safe, explain specifically which ingredients conflict with which restrictions.
+    
+    Format your response as JSON with the following structure:
+    {
+      "foodName": "Name of the food",
+      "ingredients": ["ingredient1", "ingredient2", ...],
+      "isSafe": true/false,
+      "unsafeReasons": ["reason1", "reason2", ...],
+      "description": "Brief explanation of the analysis"
+    }
+  `;
+}
+
+/**
+ * Calls the OpenRouter API with the image and prompt
+ */
+async function callOpenRouterAPI(base64Image, prompt) {
+  try {
+    const completion = await openai.chat.completions.create({
       model: "meta-llama/llama-4-maverick:free",
       messages: [
         {
@@ -99,71 +163,71 @@ If you cannot identify the food or determine safety with confidence, set isSafe 
             {
               type: "image_url",
               image_url: {
-                url: `data:image/jpeg;base64,${imageData}`,
-                detail: "high",
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
           ],
         },
       ],
       max_tokens: 1000,
+      response_format: { type: "json_object" }, // Ensure JSON response
     });
 
-    // Parse the AI response
-    const responseText = response.choices[0].message.content;
-    console.log("AI Response:", responseText);
+    return completion.choices[0].message.content || "";
+  } catch (error) {
+    console.log(`Error calling OpenRouter API: ${error}`, "food-analyzer");
+    throw new Error(`Failed to analyze the image: ${error.message || String(error)}`);
+  }
+}
 
+/**
+ * Processes the AI response into a structured format
+ */
+function processAnalysisResponse(analysisText, activeRestrictions) {
+  try {
+    // Try to extract JSON from the response
+    let jsonResponse;
     try {
-      // Extract JSON from the response
-      const jsonMatch =
-        responseText.match(/```json\n([\s\S]*?)\n```/) ||
-        responseText.match(/{[\s\S]*?}/);
+      jsonResponse = JSON.parse(analysisText);
+    } catch (e) {
+      // If direct parsing fails, try to extract JSON from a text response
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonResponse = JSON.parse(jsonMatch[0]);
+      }
+    }
 
-      const jsonString = jsonMatch
-        ? jsonMatch[1] || jsonMatch[0]
-        : responseText;
-      const result = JSON.parse(jsonString);
-
-      // Validate the result
-      if (!result.foodName) result.foodName = "Unknown Food";
-      if (!result.ingredients) result.ingredients = [];
-      if (result.isSafe === undefined) result.isSafe = null;
-      if (!result.safetyReason)
-        result.safetyReason = "Could not determine safety";
-      if (result.isSafe === false && !result.unsafeReasons)
-        result.unsafeReasons = [];
-
-      // Store the scan in the database
-      await storage.createFoodScan({
-        userId,
-        foodName: result.foodName,
-        ingredients: result.ingredients,
-        isSafe: result.isSafe,
-        safetyReason: result.safetyReason,
-        unsafeReasons: result.unsafeReasons || [],
-        description: result.description || null,
-      });
-
-      // Increment the user's scan count
-      await storage.incrementScanCount(userId);
-
-      return result;
-    } catch (parseError) {
-      console.error("Error parsing AI response:", parseError);
+    if (jsonResponse) {
       return {
-        foodName: "Analysis Error",
-        ingredients: [],
-        isSafe: null,
-        safetyReason: "Could not analyze the food image. Please try again.",
+        isSafe: jsonResponse.isSafe,
+        foodName: jsonResponse.foodName,
+        ingredients: jsonResponse.ingredients || [],
+        unsafeReasons: jsonResponse.unsafeReasons || [],
+        description: jsonResponse.description || "No detailed description provided.",
+        safetyReason: jsonResponse.isSafe ? "This food appears safe based on your dietary profile." : 
+          (jsonResponse.unsafeReasons && jsonResponse.unsafeReasons.length > 0 ? 
+            jsonResponse.unsafeReasons[0] : "This food may not be compatible with your dietary profile.")
       };
     }
-  } catch (error) {
-    console.error("Food analysis error:", error);
+
+    // Fallback if JSON parsing fails completely
     return {
-      foodName: "Analysis Error",
+      isSafe: false,
+      foodName: "Unknown food",
       ingredients: [],
-      isSafe: null,
-      safetyReason: "An error occurred during analysis. Please try again.",
+      unsafeReasons: ["Could not properly analyze the image"],
+      description: "The AI could not properly analyze this image. Please try again with a clearer photo.",
+      safetyReason: "Could not properly analyze the image"
+    };
+  } catch (error) {
+    console.log(`Error processing AI response: ${error}`, "food-analyzer");
+    return {
+      isSafe: false,
+      foodName: "Unknown food",
+      ingredients: [],
+      unsafeReasons: ["Error processing analysis"],
+      description: "There was an error processing the analysis. Please try again.",
+      safetyReason: "Error processing analysis"
     };
   }
 }

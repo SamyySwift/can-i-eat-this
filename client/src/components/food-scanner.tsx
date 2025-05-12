@@ -116,7 +116,7 @@ export default function FoodScanner({
       // console.log(data);
 
       // Redirect to the result page
-      if (data.foodName !== "Processing..." && data.scanId) {
+      if (data && data.scanId) {
         setLocation(`/result/${data.scanId}`);
       } else {
         throw new Error("No scan ID returned from server");
