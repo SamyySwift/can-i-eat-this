@@ -10,8 +10,6 @@ import {
   type InsertScanLimit,
 } from "@shared/schema";
 import { IStorage, UserProfile } from "./storage";
-// Remove import { log } from "./vite";
-import crypto from "crypto";
 
 // Add custom logger function
 function logMessage(message: string, category?: string): void {
@@ -443,7 +441,7 @@ export class SupabaseStorage implements IStorage {
       .single();
 
     if (error || !data) {
-      log(`Error creating food scan: ${error?.message}`, "storage");
+      console.log(`Error creating food scan: ${error?.message}`, "storage");
       throw new Error(error?.message || "Failed to create food scan");
     }
 
@@ -593,7 +591,7 @@ export class SupabaseStorage implements IStorage {
           .single();
 
         if (fallbackError) {
-          log(
+          console.log(
             `Error creating scan limit: ${fallbackError?.message}`,
             "storage"
           );
@@ -668,7 +666,7 @@ export class SupabaseStorage implements IStorage {
           .single();
 
         if (fallbackError) {
-          log(
+          console.log(
             `Error updating scan limit: ${fallbackError?.message}`,
             "storage"
           );
@@ -758,7 +756,7 @@ export class SupabaseStorage implements IStorage {
           .single();
 
         if (fallbackError) {
-          log(
+          console.log(
             `Error incrementing scan count: ${fallbackError?.message}`,
             "storage"
           );

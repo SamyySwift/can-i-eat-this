@@ -1,6 +1,5 @@
 import { OpenAI } from "openai";
 import fs from "fs";
-import path from "path";
 import { DietaryProfile } from "@shared/schema";
 
 // Initialize OpenAI with OpenRouter configuration
