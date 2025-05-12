@@ -70,7 +70,19 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
     isError,
   } = useQuery<FoodScan[]>({
     queryKey: [`scans-${user?.id}`],
-    queryFn: () => fetchApi(`/api/scans/user/${user?.id}`),
+    queryFn: () => {
+      // Get the auth token from Supabase
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
+      return fetchApi(`/api/scans/user/${user?.id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    },
     enabled: isAuthenticated,
     onSuccess: (data: FoodScan[]) => {
       // Preload all scan images for better performance

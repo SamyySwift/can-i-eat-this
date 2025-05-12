@@ -258,7 +258,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                 <CachedImage
                   src={
                     scan?.imageUrl
-                      ? `${import.meta.env.VITE_API_URL}${scan.imageUrl}`
+                      ? `${import.meta.env.VITE_API_URL || ''}${scan.imageUrl}`
                       : ""
                   }
                   alt={scan?.foodName || "Food Image"}
