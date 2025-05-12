@@ -21,6 +21,7 @@ export default function FoodScanner({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -57,8 +58,8 @@ export default function FoodScanner({
   }, []);
 
   const handleTakePhoto = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
     }
   };
 
@@ -132,13 +133,23 @@ export default function FoodScanner({
 
   return (
     <div className="lg:col-span-3">
+      {/* Camera input (with capture attribute) */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        ref={cameraInputRef}
+        className="hidden"
+        capture="environment"
+      />
+      
+      {/* File upload input (without capture attribute) */}
       <input
         type="file"
         accept="image/*"
         onChange={handleFileChange}
         ref={fileInputRef}
         className="hidden"
-        capture="environment"
       />
 
       {previewUrl ? (
