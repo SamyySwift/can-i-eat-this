@@ -1,5 +1,6 @@
 // API client utility
 const API_URL = import.meta.env.VITE_API_URL;
+console.log(API_URL);
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const url = `${API_URL}${endpoint}`;
