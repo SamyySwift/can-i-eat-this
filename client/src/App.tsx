@@ -14,8 +14,8 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
+import TubelightNavbar from "./components/tubelight-navbar";
+
 import PatternBackground from "@/components/pattern-background";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -168,7 +168,7 @@ function Router() {
 
   return (
     <div className="flex flex-col min-h-screen pattern-bg">
-      <Navbar auth={authContextValue} />
+      <TubelightNavbar auth={authContextValue} />
       <div className="flex-grow">
         <Switch>
           <Route path="/" component={() => <Home auth={authContextValue} />} />

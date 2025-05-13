@@ -26,13 +26,13 @@ export default function Home({ auth }: HomeProps) {
     <div className="min-h-screen flex flex-col">
       <div className="relative flex-grow flex items-center justify-center overflow-hidden">
         {/* Background image */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1491904768633-2b7e3e7fede5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80"
+            src="/images/bg.jpg"
             alt="Mountain background"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/40"></div>
+          <div className="absolute inset-0 bg-black/70"></div>
         </div>
 
         {/* Content */}
@@ -51,7 +51,7 @@ export default function Home({ auth }: HomeProps) {
                 size="lg"
                 className="bg-transparent border border-white hover:text-black text-white rounded-full hover:bg-gray-100 px-8 py-6 text-lg"
               >
-                Get Started <ArrowRight className="w-5 h-5 ml-2" />
+                Get Started
               </Button>
             </Link>
             <Link href="/about">
