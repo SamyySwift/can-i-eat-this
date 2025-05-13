@@ -10,6 +10,7 @@ import {
   XCircle,
   AlertTriangle,
   Trash2,
+  ChevronLeftCircleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,13 +105,16 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
       );
       const accessToken = supabaseAuth?.access_token || "";
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/scans/user/${user?.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || ""}/api/scans/user/${user?.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -218,10 +222,8 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/">
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Home
-          </Button>
+        <Link href="/dashboard">
+          <ChevronLeftCircleIcon className="h-8 w-8" />
         </Link>
       </div>
 
@@ -242,7 +244,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                     variant="outline"
                     className="flex items-center gap-2 text-red-500 border-red-200 hover:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4" /> Delete All
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -374,7 +376,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
                           .map((ingredient, index) => (
                             <Badge
                               key={index}
-                              variant="secondary"
+                              // variant="outline"
                               className="text-xs"
                             >
                               {ingredient}

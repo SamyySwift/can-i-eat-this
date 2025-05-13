@@ -9,6 +9,8 @@ import {
   XCircle,
   AlertTriangle,
   CircleHelp,
+  ChevronLeft,
+  ChevronLeftCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -252,12 +254,10 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 md:mt-20">
       <div className="mb-6">
         <Link href="/">
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Home
-          </Button>
+          <ChevronLeftCircle className="h-8 w-8" />
         </Link>
       </div>
 
@@ -271,8 +271,8 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   src={scan?.imageUrl || ""}
                   alt={scan?.foodName || "Food Image"}
                   foodName={scan?.foodName}
-                  className="w-full h-64"
-                  height="16rem"
+                  className="w-full h-full object-cover"
+                  // height="40rem"
                 />
               </div>
             </div>
@@ -285,9 +285,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   Analyzed on {formatDate(scan?.scannedAt)}
                 </p>
               </div>
-
               <div className="mb-6">{renderSafetyBadge()}</div>
-
               {scan?.isSafe === false && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -323,7 +321,6 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   </div>
                 </div>
               )}
-
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Detected Ingredients:
@@ -372,8 +369,8 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   )}
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
+              {/* bottom buttons */}
+              {/* <div className="flex flex-col sm:flex-row gap-4">
                 <Button onClick={handleSaveToHistory} className="flex-1 gap-2">
                   <Bookmark className="h-4 w-4" /> Save to History
                 </Button>
@@ -384,14 +381,14 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                 >
                   <Share className="h-4 w-4" /> Share
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </div>
 
       {/* Safer Alternatives Section (Only shown for unsafe foods) */}
-      {scan?.isSafe === false &&
+      {/* {scan?.isSafe === false &&
         alternatives &&
         Array.isArray(alternatives) &&
         alternatives.length > 0 && (
@@ -423,7 +420,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
       {/* Dietary Information Section */}
       {dietaryInfo && (
