@@ -25,6 +25,7 @@ import DietaryProfile from "@/pages/dietary-profile";
 import Profile from "@/pages/profile";
 import Result from "@/pages/result";
 import ScanHistory from "@/pages/scan-history";
+import Chat from "@/pages/chat";
 
 type User = AuthUser;
 
@@ -175,6 +176,16 @@ function Router() {
           <Route
             path="/dashboard"
             component={() => <Dashboard auth={authContextValue} />}
+          />
+          <Route
+            path="/chat"
+            component={() => {
+              return authContextValue.isAuthenticated ? (
+                <Chat auth={authContextValue} />
+              ) : (
+                <Auth auth={authContextValue} mode="login" />
+              );
+            }}
           />
           <Route
             path="/login"

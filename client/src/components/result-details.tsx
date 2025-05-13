@@ -1,15 +1,12 @@
-import React, { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   ArrowLeft,
-  Bookmark,
-  Share,
   CheckCircle,
   XCircle,
   AlertTriangle,
   CircleHelp,
-  ChevronLeft,
   ChevronLeftCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FoodScan, FoodSafetyCheckResponse } from "@/types";
 import CachedImage from "@/components/cached-image";
 import { fetchApi } from "@/lib/api";
+import { Input } from "@/components/ui/input";
 
 interface ResultDetailsProps {
   scanId: string;
@@ -28,6 +26,10 @@ interface ResultDetailsProps {
 
 export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   const { toast } = useToast();
+  const [isCorrectFood, setIsCorrectFood] = useState<boolean | null>(null);
+  const [newFoodName, setNewFoodName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   // Get the auth token from Supabase
   const getAuthToken = () => {
@@ -253,6 +255,55 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     }
   };
 
+  // Add mutation for updating food name
+  const updateFoodNameMutation = useMutation({
+    mutationFn: async (foodName: string) => {
+      const accessToken = getAuthToken();
+      return fetchApi(`/api/scans/${scanId}/update-food-name`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ foodName }),
+        credentials: "include",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Food Updated",
+        description: "The food has been reanalyzed with the new name.",
+      });
+      // Invalidate and refetch the scan data
+      queryClient.invalidateQueries({ queryKey: [`scan-${scanId}`] });
+      setIsSubmitting(false);
+      setIsCorrectFood(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update food name.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    },
+  });
+
+  const handleFoodNameUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFoodName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a food name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    updateFoodNameMutation.mutate(newFoodName);
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 md:mt-20">
       <div className="mb-6">
@@ -285,7 +336,9 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   Analyzed on {formatDate(scan?.scannedAt)}
                 </p>
               </div>
+
               <div className="mb-6">{renderSafetyBadge()}</div>
+
               {scan?.isSafe === false && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -382,6 +435,52 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
                   <Share className="h-4 w-4" /> Share
                 </Button>
               </div> */}
+              {/* Food detection feedback section */}
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Was the food correctly detected?
+                </p>
+                <div className="flex space-x-2">
+                  <Button
+                    variant={isCorrectFood === true ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsCorrectFood(true)}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    variant={isCorrectFood === false ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsCorrectFood(false)}
+                  >
+                    No
+                  </Button>
+                </div>
+
+                {isCorrectFood === false && (
+                  <form onSubmit={handleFoodNameUpdate} className="mt-3">
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        Please provide the correct food name:
+                      </p>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={newFoodName}
+                          onChange={(e) => setNewFoodName(e.target.value)}
+                          placeholder="Enter food name"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting || !newFoodName.trim()}
+                        >
+                          {isSubmitting ? "Updating..." : "Update"}
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </div>

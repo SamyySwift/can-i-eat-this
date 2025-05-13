@@ -11,6 +11,7 @@ import {
   Utensils,
   Menu,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export function NavBar({ items, className }: NavBarProps) {
   const getActiveTabFromLocation = () => {
     if (location === "/") return "Home";
     if (location === "/dashboard") return "Dashboard";
+    if (location === "/chat") return "Chat";
     if (location === "/history") return "History";
     if (location === "/profile") return "Profile";
     if (location === "/login") return "Login";
@@ -145,6 +147,7 @@ export default function TubelightNavbar({ auth }: TubelightNavbarProps) {
     if (isAuthenticated) {
       items.push(
         { name: "Dashboard", url: "/dashboard", icon: Utensils },
+        { name: "Chat", url: "/chat", icon: MessageCircle },
         { name: "History", url: "/history", icon: History },
         { name: "Profile", url: "/profile", icon: User }
       );
