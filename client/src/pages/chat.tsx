@@ -219,7 +219,7 @@ export default function Chat({ auth }: ChatProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8 mt-20">
+    <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8 mt-28">
       <Card className="shadow-lg">
         <CardHeader className="border-b bg-muted/50">
           <div className="flex items-center justify-between">
@@ -327,7 +327,7 @@ export default function Chat({ auth }: ChatProps) {
             <div className="border-t p-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ask about food, nutrition, or dietary needs..."
+                  placeholder="Type Something..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -347,7 +347,7 @@ export default function Chat({ auth }: ChatProps) {
                   {isLoading ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-4 w-4 text-black" />
                   )}
                 </Button>
               </div>

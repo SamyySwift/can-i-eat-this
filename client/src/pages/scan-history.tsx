@@ -220,7 +220,7 @@ export default function ScanHistory({ auth }: ScanHistoryProps) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mt-32">
       <div className="mb-6">
         <Link href="/dashboard">
           <ChevronLeftCircleIcon className="h-8 w-8" />

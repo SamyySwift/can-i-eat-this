@@ -30,7 +30,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   const [newFoodName, setNewFoodName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
-  
+
   // Move the mutation hook to the top level of the component
   // This ensures it's always called in the same order
   const updateFoodNameMutation = useMutation({
@@ -247,7 +247,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   // Update renderSafetyBadge to handle null scan
   const renderSafetyBadge = () => {
     if (!scan) return null; // Add null check
-    
+
     if (scan.isSafe === true) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -309,7 +309,7 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 md:mt-20">
+    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 mt-32">
       <div className="mb-6">
         <Link href="/">
           <ChevronLeftCircle className="h-8 w-8" />
