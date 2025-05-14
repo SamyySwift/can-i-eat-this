@@ -159,8 +159,11 @@ function createAnalysisPrompt(activeRestrictions) {
  */
 async function callOpenRouterAPI(base64Image, prompt) {
   try {
+    // Use the selected model or fall back to default
+    const model = global.selectedModel || "meta-llama/llama-4-maverick:free";
+    
     const completion = await openai.chat.completions.create({
-      model: "meta-llama/llama-4-maverick:free",
+      model: model,
       messages: [
         {
           role: "user",
@@ -254,17 +257,17 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
     const messages = [
       {
         role: "system",
-        content: systemPrompt,
-      },
+        content: systemPrompt
+      }
     ];
 
     // Add conversation history if available
     if (history && history.length > 0) {
       // Add previous messages to provide context
-      history.forEach((msg) => {
+      history.forEach(msg => {
         messages.push({
           role: msg.role,
-          content: msg.content,
+          content: msg.content
         });
       });
     }
@@ -274,7 +277,7 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
     if (currentQuery) {
       messages.push({
         role: "user",
-        content: currentQuery,
+        content: currentQuery
       });
     }
 
@@ -283,8 +286,11 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
       JSON.stringify(messages)
     );
 
+    // Use the selected model or fall back to default
+    const model = global.selectedModel || "meta-llama/llama-4-maverick:free";
+
     const completion = await openai.chat.completions.create({
-      model: "meta-llama/llama-4-maverick:free",
+      model: model,
       messages: messages,
       max_tokens: 1000,
       temperature: 0.7, // Add some creativity but keep responses focused
@@ -299,15 +305,9 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
       return "I'm sorry, I couldn't generate a response due to a service error.";
     }
 
-    return (
-      completion.choices[0].message.content ||
-      "I'm sorry, I couldn't generate a response."
-    );
+    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
   } catch (error) {
-    console.log(
-      `Error calling OpenRouter API for chat: ${error}`,
-      "food-analyzer"
-    );
+    console.log(`Error calling OpenRouter API for chat: ${error}`, "food-analyzer");
     // Return a fallback response instead of throwing an error
     return "I'm sorry, I encountered an error processing your question. Please try again later.";
   }

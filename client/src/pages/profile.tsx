@@ -38,12 +38,20 @@ import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { DietaryProfile, ScanLimit } from "@/types";
 import { fetchApi } from "@/lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface ProfileProps {
   auth: {
     user: any;
     isAuthenticated: boolean;
-    logout: () => Promise<void>; // Add this line
+    logout?: () => Promise<void>;
   };
 }
 
@@ -60,10 +68,13 @@ type UserProfileFormValues = z.infer<typeof userProfileSchema>;
 
 export default function Profile({ auth }: ProfileProps) {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, user, logout } = auth; // Add logout here
+  const { isAuthenticated, user, logout } = auth; // Destructure logout here
   const [isEditing, setIsEditing] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [selectedModel, setSelectedModel] = useState<string>(
+    localStorage.getItem("aiModel") || "meta-llama/llama-4-maverick:free"
+  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -186,8 +197,16 @@ export default function Profile({ auth }: ProfileProps) {
   };
 
   const handleLogout = async () => {
-    await logout();
-    setLocation("/");
+    if (logout) {
+      await logout();
+      setLocation("/");
+    } else {
+      toast({
+        title: "Logout Failed",
+        description: "Logout function is not available",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateDietaryProfile = async (
@@ -396,8 +415,45 @@ export default function Profile({ auth }: ProfileProps) {
     },
   ];
 
+  // Function to handle model selection
+  const handleModelChange = async (value: string) => {
+    try {
+      // Get the auth token from Supabase
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
+      // Update the model in localStorage
+      localStorage.setItem("aiModel", value);
+      setSelectedModel(value);
+
+      // Call API to update the model on the server
+      await fetchApi(`/api/settings/model`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ model: value }),
+      });
+
+      toast({
+        title: "Model Updated",
+        description: "AI model has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mt-20">
       <div className="glass rounded-xl overflow-hidden shadow-lg mb-8">
         <div className="px-6 py-8">
           <div className="md:flex md:items-center md:justify-between">
@@ -547,7 +603,6 @@ export default function Profile({ auth }: ProfileProps) {
           </div>
         </div>
       </div>
-
       <div className="glass rounded-xl overflow-hidden shadow-lg mb-8">
         <div className="px-6 py-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -796,7 +851,48 @@ export default function Profile({ auth }: ProfileProps) {
           </h2>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Notifications */}
+            {/* AI Model Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-medium text-gray-900">
+                  AI Model Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="model-select">Select AI Model</Label>
+                  <Select
+                    value={selectedModel}
+                    onValueChange={handleModelChange}
+                  >
+                    <SelectTrigger id="model-select">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="meta-llama/llama-4-maverick:free">
+                        Llama 4 Maverick
+                      </SelectItem>
+                      <SelectItem value="google/gemini-2.0-flash-exp:free">
+                        Gemini 2.0 Flash
+                      </SelectItem>
+                      <SelectItem value="opengvlab/internvl3-14b:free">
+                        InternVL3 14B
+                      </SelectItem>
+                      <SelectItem value="google/gemma-3-27b-it:free">
+                        Gemma 3 27B
+                      </SelectItem>
+                      <SelectItem value="mistralai/mistral-small-3.1-24b-instruct:free">
+                        Mistral Small 3.1 24B
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Select the AI model used for food analysis and chat
+                    responses.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Security */}
             <Card>
@@ -806,12 +902,6 @@ export default function Profile({ auth }: ProfileProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Button variant="outline" className="gap-2">
-                    <Shield className="h-4 w-4" /> Change Password
-                  </Button>
-                </div>
-
                 <div className="pt-3 border-t border-gray-200">
                   <Button
                     variant="outline"

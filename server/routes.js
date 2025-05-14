@@ -764,8 +764,10 @@ async function registerRoutes(app) {
         return res.status(400).json({ message: "User ID is required" });
       }
 
-      if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: "Valid query text is required" });
+      if (!query || typeof query !== "string") {
+        return res
+          .status(400)
+          .json({ message: "Valid query text is required" });
       }
 
       // Ensure user can only chat for themselves
@@ -779,7 +781,7 @@ async function registerRoutes(app) {
       const response = await processChatQuery({
         userId,
         query,
-        history: history || []
+        history: history || [],
       });
 
       res.status(200).json(response);
@@ -787,6 +789,41 @@ async function registerRoutes(app) {
       console.error("Chat query error:", error);
       res.status(500).json({
         message: error.message || "Failed to process your question",
+      });
+    }
+  });
+
+  // Model settings route
+  app.put("/api/settings/model", authMiddleware, async (req, res) => {
+    try {
+      const { model } = req.body;
+
+      if (!model) {
+        return res.status(400).json({ message: "Model name is required" });
+      }
+
+      // Validate model name against allowed models
+      const allowedModels = [
+        "meta-llama/llama-4-maverick:free",
+        "google/gemini-2.0-flash-exp:free",
+        "opengvlab/internvl3-14b:free",
+        "google/gemma-3-27b-it:free",
+        "mistralai/mistral-small-3.1-24b-instruct:free",
+      ];
+
+      if (!allowedModels.includes(model)) {
+        return res.status(400).json({ message: "Invalid model name" });
+      }
+
+      // Store the model preference in a global variable or database
+      // For simplicity, we'll use a global variable here
+      global.selectedModel = model;
+
+      res.status(200).json({ message: "Model updated successfully" });
+    } catch (error) {
+      console.error("Model update error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to update model",
       });
     }
   });
