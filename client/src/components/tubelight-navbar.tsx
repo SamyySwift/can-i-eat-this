@@ -9,24 +9,15 @@ import {
   LogIn,
   UserPlus,
   ScanQrCode,
-  Menu,
-  X,
-  MessageCircle,
 } from "lucide-react";
+import { IoChatbubblesOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { IconType } from "react-icons";
 
 interface NavItem {
   name: string;
   url: string;
-  icon: LucideIcon;
+  icon: LucideIcon | IconType;
 }
 
 interface NavBarProps {
@@ -147,7 +138,7 @@ export default function TubelightNavbar({ auth }: TubelightNavbarProps) {
     if (isAuthenticated) {
       items.push(
         { name: "Dashboard", url: "/dashboard", icon: ScanQrCode },
-        { name: "Chat", url: "/chat", icon: MessageCircle },
+        { name: "Chat", url: "/chat", icon: IoChatbubblesOutline },
         { name: "History", url: "/history", icon: History },
         { name: "Profile", url: "/profile", icon: User }
       );

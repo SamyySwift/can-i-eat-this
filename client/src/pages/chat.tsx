@@ -1,10 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { MessageCircle, Send, Trash2 } from "lucide-react";
+import { Send, Trash2 } from "lucide-react";
+import { IoChatbubblesOutline } from "react-icons/io5";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -128,9 +135,9 @@ export default function Chat({ auth }: ChatProps) {
 
       // Format the history properly - only include the last 10 messages
       // Don't include the message we just added (it will be sent as the query)
-      const formattedHistory = messages.slice(-10).map(msg => ({
+      const formattedHistory = messages.slice(-10).map((msg) => ({
         role: msg.sender === "user" ? "user" : "assistant",
-        content: msg.text
+        content: msg.text,
       }));
 
       // Send the query to the API with properly structured chat history
@@ -143,7 +150,7 @@ export default function Chat({ auth }: ChatProps) {
         body: JSON.stringify({
           userId: user.id,
           query: userQuery,
-          history: formattedHistory
+          history: formattedHistory,
         }),
       });
 
@@ -182,25 +189,27 @@ export default function Chat({ auth }: ChatProps) {
   // Function to clear chat history
   const clearChatHistory = () => {
     // Clear messages from state
-    setMessages([{
-      id: "1",
-      text: "Hello! How can I help you with your food choices today?",
-      sender: "assistant",
-      timestamp: new Date(),
-    }]);
-    
+    setMessages([
+      {
+        id: "1",
+        text: "Hello! How can I help you with your food choices today?",
+        sender: "assistant",
+        timestamp: new Date(),
+      },
+    ]);
+
     // Clear from localStorage
     if (isAuthenticated && user?.id) {
       localStorage.removeItem(`chat_history_${user.id}`);
     }
-    
+
     // Show success toast
     toast({
       title: "Chat history cleared",
       description: "Your conversation history has been cleared.",
       variant: "default",
     });
-    
+
     // Close the dialog
     setShowClearDialog(false);
   };
@@ -215,17 +224,17 @@ export default function Chat({ auth }: ChatProps) {
         <CardHeader className="border-b bg-muted/50">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center">
-              <MessageCircle className="h-5 w-5 text-primary mr-2" />
+              <IoChatbubblesOutline className="h-5 w-5 text-primary mr-2" />
               Food Assistant Chat
             </CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowClearDialog(true)}
               className="flex items-center gap-1"
             >
               <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Clear History</span>
+              <span className="hidden sm:inline">Clear Chat</span>
             </Button>
           </div>
           <CardDescription>
@@ -346,20 +355,23 @@ export default function Chat({ auth }: ChatProps) {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear Chat History</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete your entire conversation history. 
+              This will permanently delete your entire conversation history.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={clearChatHistory} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={clearChatHistory}
+              className="bg-destructive text-destructive-foreground"
+            >
               Clear History
             </AlertDialogAction>
           </AlertDialogFooter>
