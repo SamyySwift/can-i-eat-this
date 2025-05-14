@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { MessageCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatProps {
   auth: {
@@ -23,15 +25,11 @@ interface Message {
 export default function Chat({ auth }: ChatProps) {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user } = auth;
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "Hello! How can I help you with your food choices today?",
-      sender: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -40,8 +38,61 @@ export default function Chat({ auth }: ChatProps) {
     }
   }, [isAuthenticated, setLocation]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+  // Load chat history from localStorage when component mounts
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const savedMessages = localStorage.getItem(`chat_history_${user.id}`);
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages).map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(parsedMessages);
+        } catch (error) {
+          console.error("Error parsing saved messages:", error);
+          // If there's an error, initialize with welcome message
+          setMessages([
+            {
+              id: "1",
+              text: "Hello! How can I help you with your food choices today?",
+              sender: "assistant",
+              timestamp: new Date(),
+            },
+          ]);
+        }
+      } else {
+        // If no saved messages, initialize with welcome message
+        setMessages([
+          {
+            id: "1",
+            text: "Hello! How can I help you with your food choices today?",
+            sender: "assistant",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (isAuthenticated && user?.id && messages.length > 0) {
+      localStorage.setItem(`chat_history_${user.id}`, JSON.stringify(messages));
+    }
+  }, [messages, isAuthenticated, user]);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || isLoading) return;
 
     // Add user message
     const userMessage: Message = {
@@ -50,19 +101,68 @@ export default function Chat({ auth }: ChatProps) {
       sender: "user",
       timestamp: new Date(),
     };
-    setMessages([...messages, userMessage]);
-    setNewMessage("");
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
 
-    // Simulate assistant response after a short delay
-    setTimeout(() => {
+    // Clear input and set loading state
+    const userQuery = newMessage;
+    setNewMessage("");
+    setIsLoading(true);
+
+    try {
+      // Get the auth token from Supabase
+      const supabaseAuth = JSON.parse(
+        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+      );
+      const accessToken = supabaseAuth?.access_token || "";
+
+      // Send the query to the API with chat history
+      const response = await fetchApi("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          query: userQuery,
+          // Send recent message history (last 10 messages) for context
+          history: messages.slice(-10).map((msg) => ({
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.text,
+          })),
+        }),
+      });
+
+      // Add assistant response
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I'm a dummy chat assistant. In the future, I'll be able to answer your food-related questions!",
+        text: response.answer || "I'm sorry, I couldn't process your question.",
         sender: "assistant",
         timestamp: new Date(),
       };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error("Chat error:", error);
+
+      // Show error toast
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to get a response",
+        variant: "destructive",
+      });
+
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, I encountered an error processing your question. Please try again.",
+        sender: "assistant",
+        timestamp: new Date(),
+      };
+      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -102,7 +202,7 @@ export default function Chat({ auth }: ChatProps) {
                     )}
                     {message.sender === "user" && (
                       <Avatar className="h-8 w-8 ml-2">
-                        <AvatarFallback className="bg-secondary text-white">
+                        <AvatarFallback className="bg-black text-white">
                           {user?.email
                             ? user.email.charAt(0).toUpperCase()
                             : "U"}
@@ -127,22 +227,65 @@ export default function Chat({ auth }: ChatProps) {
                   </div>
                 </div>
               ))}
+
+              {/* AI Thinking Bubble */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex max-w-[80%]">
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarFallback className="bg-primary text-white">
+                        AI
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="rounded-lg px-4 py-2 bg-muted">
+                      <div className="flex space-x-1">
+                        <div
+                          className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
+                        <div
+                          className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "600ms" }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Invisible div for scrolling to bottom */}
+              <div ref={messagesEndRef} />
             </div>
+
             <div className="border-t p-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Type your message..."
+                  placeholder="Ask about food, nutrition, or dietary needs..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
                       handleSendMessage();
                     }
                   }}
                   className="flex-1 rounded-full"
+                  disabled={isLoading}
                 />
-                <Button onClick={handleSendMessage} className="rounded-full">
-                  <Send className="h-4 w-4" />
+                <Button
+                  onClick={handleSendMessage}
+                  className="rounded-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>

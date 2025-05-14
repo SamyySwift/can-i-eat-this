@@ -8,7 +8,7 @@ import {
   User,
   LogIn,
   UserPlus,
-  Utensils,
+  ScanQrCode,
   Menu,
   X,
   MessageCircle,
@@ -81,7 +81,7 @@ export function NavBar({ items, className }: NavBarProps) {
         className
       )}
     >
-      <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+      <div className="flex items-center gap-2 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.name;
@@ -146,7 +146,7 @@ export default function TubelightNavbar({ auth }: TubelightNavbarProps) {
 
     if (isAuthenticated) {
       items.push(
-        { name: "Dashboard", url: "/dashboard", icon: Utensils },
+        { name: "Dashboard", url: "/dashboard", icon: ScanQrCode },
         { name: "Chat", url: "/chat", icon: MessageCircle },
         { name: "History", url: "/history", icon: History },
         { name: "Profile", url: "/profile", icon: User }
@@ -166,7 +166,10 @@ export default function TubelightNavbar({ auth }: TubelightNavbarProps) {
   return (
     <nav className="sticky top-0 z-10">
       {/* Tubelight Navigation */}
-      <NavBar items={getNavItems()} className="sm:w-auto w-[90%] pointer-events-none" />
+      <NavBar
+        items={getNavItems()}
+        className="sm:w-auto w-[90%] pointer-events-none"
+      />
     </nav>
   );
 }

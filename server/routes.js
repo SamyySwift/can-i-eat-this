@@ -1,6 +1,9 @@
 import { createServer } from "http";
 import { storage } from "./storage.js";
-import { analyzeFoodImage } from "./services/food-analyzer.js";
+import {
+  analyzeFoodImage,
+  processChatQuery,
+} from "./services/food-analyzer.js";
 import { authMiddleware } from "./middleware/auth.js";
 import multer from "multer";
 import path from "path";
@@ -560,11 +563,11 @@ async function registerRoutes(app) {
 
       // First, get all scans for this user to collect image URLs
       const userScans = await storage.getFoodScansByUserId(userId);
-      
+
       // Delete images from Supabase storage
       if (userScans && userScans.length > 0) {
         console.log(`Deleting ${userScans.length} scans for user ${userId}`);
-        
+
         for (const scan of userScans) {
           if (scan.imageUrl) {
             try {
@@ -573,13 +576,13 @@ async function registerRoutes(app) {
               const fullPath = url.pathname.split(
                 "/storage/v1/object/public/food-images/"
               )[1];
-              
+
               if (fullPath) {
                 console.log(`Deleting image: ${fullPath}`);
                 const { data, error } = await supabase.storage
                   .from("food-images")
                   .remove([fullPath]);
-                
+
                 if (error) {
                   console.error(`Error deleting image ${fullPath}:`, error);
                 } else {
@@ -587,7 +590,10 @@ async function registerRoutes(app) {
                 }
               }
             } catch (imgError) {
-              console.error(`Error processing image URL ${scan.imageUrl}:`, imgError);
+              console.error(
+                `Error processing image URL ${scan.imageUrl}:`,
+                imgError
+              );
               // Continue with other images even if one fails
             }
           }
@@ -596,9 +602,9 @@ async function registerRoutes(app) {
 
       // Now delete all scans from the database
       const result = await storage.deleteAllScansByUserId(userId);
-      res.status(200).json({ 
-        message: "All scans deleted successfully", 
-        count: result.count || userScans.length 
+      res.status(200).json({
+        message: "All scans deleted successfully",
+        count: result.count || userScans.length,
       });
     } catch (error) {
       console.error("Delete all scans error:", error);
@@ -747,6 +753,44 @@ async function registerRoutes(app) {
   });
 
   // Create HTTP server
+  // Add this to the registerRoutes function, before the return statement
+
+  // Chat query route
+  app.post("/api/chat", authMiddleware, async (req, res) => {
+    try {
+      const { userId, query, history } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Valid query text is required" });
+      }
+
+      // Ensure user can only chat for themselves
+      if (req.user?.id !== userId) {
+        return res.status(403).json({
+          message: "Forbidden - You can only use chat for your own account",
+        });
+      }
+
+      // Process the chat query with history
+      const response = await processChatQuery({
+        userId,
+        query,
+        history: history || []
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error("Chat query error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to process your question",
+      });
+    }
+  });
+
   return server;
 }
 
