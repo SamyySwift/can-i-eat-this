@@ -233,33 +233,49 @@ function processAnalysisResponse(analysisText, activeRestrictions) {
 }
 
 /**
- * Processes a chat query about food and provides a response
- * @param {Object} options - The options object
- * @param {string} options.userId - The user ID
- * @param {string} options.query - The user's chat query about food
- * @param {Array} options.history - Previous messages in the conversation
- * @returns {Promise<Object>} Chat response with answer
+ * Calls the OpenRouter API with the chat prompt and conversation history
  */
-async function processChatQuery(options) {
-  const { userId, query, history = [] } = options;
-
+async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
   try {
-    // Get user's dietary profile for context
-    const dietaryProfile = await storage.getDietaryProfileByUserId(userId);
-    
-    // Create prompt for the AI with conversation history
-    const prompt = createChatPrompt(query, dietaryProfile, history);
-    
-    // Call OpenRouter API using OpenAI SDK
-    const response = await callOpenRouterChatAPI(prompt, history);
-    
-    return {
-      answer: response,
-      query: query
-    };
+    // Format the messages array for the API
+    const messages = [
+      {
+        role: "system",
+        content: systemPrompt
+      }
+    ];
+
+    // Add conversation history if available
+    if (history && history.length > 0) {
+      // Add previous messages to provide context
+      history.forEach(msg => {
+        messages.push({
+          role: msg.role,
+          content: msg.content
+        });
+      });
+    }
+
+    // Always add the current query as the last user message
+    // This ensures the AI responds to the current question
+    if (currentQuery) {
+      messages.push({
+        role: "user",
+        content: currentQuery
+      });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "meta-llama/llama-4-maverick:free",
+      messages: messages,
+      max_tokens: 1000,
+      temperature: 0.7, // Add some creativity but keep responses focused
+    });
+
+    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
   } catch (error) {
-    console.log(`Error processing chat query: ${error}`, "food-analyzer");
-    throw new Error(`Failed to process chat query: ${error.message || String(error)}`);
+    console.log(`Error calling OpenRouter API for chat: ${error}`, "food-analyzer");
+    throw new Error(`Failed to process your question: ${error.message || String(error)}`);
   }
 }
 
@@ -285,64 +301,60 @@ function createChatPrompt(query, dietaryProfile, history = []) {
     }
   }
 
-  // Create system instructions
+  // Create system instructions with improved direct question handling
   const systemInstructions = `
-    You are a helpful food assistant that only answers questions related to food, nutrition, cooking, and dietary needs.
+    You are a helpful food assistant that answers questions related to food, nutrition, cooking, and dietary needs.
     
     ${dietaryContext}
     
     Important rules:
-    1. Only answer questions related to food, nutrition, cooking, or dietary needs.
-    2. If the question is not related to these topics, politely explain that you can only help with food-related questions.
-    3. Be accurate, helpful, and concise in your answers.
-    4. When discussing foods that might conflict with the user's dietary profile, mention those concerns.
-    5. Do not make up information. If you're unsure, say so.
-    6. Remember the conversation history to provide context-aware responses.
+    1. NEVER start with a generic greeting. ALWAYS directly answer the user's question first.
+    2. If the user asks if they can eat a specific food (e.g., "Can I eat chicken?" or "Can I take peanuts?"), ALWAYS respond with a clear "Yes", "No", or "Maybe" at the beginning of your response, then explain why.
+    3. For follow-up questions like "how about X?" or "what about Y?", treat them as "Can I eat X?" or "Can I eat Y?" and provide a direct answer.
+    4. Only answer questions related to food, nutrition, cooking, or dietary needs.
+    5. If the question is not related to these topics, politely explain that you can only help with food-related questions.
+    6. Be accurate, helpful, and concise in your answers.
+    7. When discussing foods that might conflict with the user's dietary profile, mention those concerns.
+    8. Do not make up information. If you're unsure, say so.
+    9. Remember the conversation history to provide context-aware responses.
+    10. When asked about previous questions, refer to the actual questions asked, not your responses.
+    11. If asked "what did I ask you last" or similar, respond with the content of their last question.
+    12. Treat meta-questions about the conversation as valid questions, even if they're not directly about food.
+    13. For questions like "can I take/eat X?", check if X conflicts with any dietary restrictions and provide a direct answer.
+    14. NEVER respond with "I'm ready to assist you" or similar generic greetings.
   `;
 
   return systemInstructions;
 }
 
 /**
- * Calls the OpenRouter API with the chat prompt and conversation history
+ * Processes a chat query about food and provides a response
+ * @param {Object} options - The options object
+ * @param {string} options.userId - The user ID
+ * @param {string} options.query - The user's chat query about food
+ * @param {Array} options.history - Previous messages in the conversation
+ * @returns {Promise<Object>} Chat response with answer
  */
-async function callOpenRouterChatAPI(systemPrompt, history = []) {
+async function processChatQuery(options) {
+  const { userId, query, history = [] } = options;
+
   try {
-    // Format the messages array for the API
-    const messages = [
-      {
-        role: "system",
-        content: systemPrompt
-      }
-    ];
-
-    // Add conversation history if available
-    if (history && history.length > 0) {
-      // Add previous messages to provide context
-      history.forEach(msg => {
-        messages.push({
-          role: msg.role,
-          content: msg.content
-        });
-      });
-    }
-
-    // Add the current user query as the last message
-    messages.push({
-      role: "user",
-      content: history.length > 0 ? history[history.length - 1].content : "Hello"
-    });
-
-    const completion = await openai.chat.completions.create({
-      model: "meta-llama/llama-4-maverick:free",
-      messages: messages,
-      max_tokens: 1000,
-    });
-
-    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
+    // Get user's dietary profile for context
+    const dietaryProfile = await storage.getDietaryProfileByUserId(userId);
+    
+    // Create prompt for the AI with conversation history
+    const prompt = createChatPrompt(query, dietaryProfile, history);
+    
+    // Call OpenRouter API using OpenAI SDK with the current query explicitly passed
+    const response = await callOpenRouterChatAPI(prompt, history, query);
+    
+    return {
+      answer: response,
+      query: query
+    };
   } catch (error) {
-    console.log(`Error calling OpenRouter API for chat: ${error}`, "food-analyzer");
-    throw new Error(`Failed to process your question: ${error.message || String(error)}`);
+    console.log(`Error processing chat query: ${error}`, "food-analyzer");
+    throw new Error(`Failed to process chat query: ${error.message || String(error)}`);
   }
 }
 

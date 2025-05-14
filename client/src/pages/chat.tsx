@@ -1,12 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ChatProps {
   auth: {
@@ -30,6 +40,7 @@ export default function Chat({ auth }: ChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -115,7 +126,14 @@ export default function Chat({ auth }: ChatProps) {
       );
       const accessToken = supabaseAuth?.access_token || "";
 
-      // Send the query to the API with chat history
+      // Format the history properly - only include the last 10 messages
+      // Don't include the message we just added (it will be sent as the query)
+      const formattedHistory = messages.slice(-10).map(msg => ({
+        role: msg.sender === "user" ? "user" : "assistant",
+        content: msg.text
+      }));
+
+      // Send the query to the API with properly structured chat history
       const response = await fetchApi("/api/chat", {
         method: "POST",
         headers: {
@@ -125,11 +143,7 @@ export default function Chat({ auth }: ChatProps) {
         body: JSON.stringify({
           userId: user.id,
           query: userQuery,
-          // Send recent message history (last 10 messages) for context
-          history: messages.slice(-10).map((msg) => ({
-            role: msg.sender === "user" ? "user" : "assistant",
-            content: msg.text,
-          })),
+          history: formattedHistory
         }),
       });
 
@@ -165,6 +179,32 @@ export default function Chat({ auth }: ChatProps) {
     }
   };
 
+  // Function to clear chat history
+  const clearChatHistory = () => {
+    // Clear messages from state
+    setMessages([{
+      id: "1",
+      text: "Hello! How can I help you with your food choices today?",
+      sender: "assistant",
+      timestamp: new Date(),
+    }]);
+    
+    // Clear from localStorage
+    if (isAuthenticated && user?.id) {
+      localStorage.removeItem(`chat_history_${user.id}`);
+    }
+    
+    // Show success toast
+    toast({
+      title: "Chat history cleared",
+      description: "Your conversation history has been cleared.",
+      variant: "default",
+    });
+    
+    // Close the dialog
+    setShowClearDialog(false);
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -173,10 +213,24 @@ export default function Chat({ auth }: ChatProps) {
     <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8 mt-20">
       <Card className="shadow-lg">
         <CardHeader className="border-b bg-muted/50">
-          <CardTitle className="flex items-center">
-            <MessageCircle className="h-5 w-5 text-primary mr-2" />
-            Food Assistant Chat
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <MessageCircle className="h-5 w-5 text-primary mr-2" />
+              Food Assistant Chat
+            </CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowClearDialog(true)}
+              className="flex items-center gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Clear History</span>
+            </Button>
+          </div>
+          <CardDescription>
+            Ask questions about food, nutrition, and dietary needs
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="flex flex-col h-[60vh]">
@@ -292,6 +346,25 @@ export default function Chat({ auth }: ChatProps) {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Chat History</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your entire conversation history. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={clearChatHistory} className="bg-destructive text-destructive-foreground">
+              Clear History
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
