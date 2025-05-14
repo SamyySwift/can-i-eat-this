@@ -372,7 +372,7 @@ export default function Chat({ auth }: ChatProps) {
               onClick={clearChatHistory}
               className="bg-destructive text-destructive-foreground"
             >
-              Clear History
+              Clear Chat
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -32,9 +32,11 @@ async function analyzeFoodImage(options) {
         foodName: "Unknown Food",
         ingredients: [],
         isSafe: null,
-        safetyReason: "No dietary profile found. Please set up your dietary profile first.",
+        safetyReason:
+          "No dietary profile found. Please set up your dietary profile first.",
         unsafeReasons: [],
-        description: "No dietary profile found. Please set up your dietary profile first."
+        description:
+          "No dietary profile found. Please set up your dietary profile first.",
       };
     }
 
@@ -66,7 +68,9 @@ async function analyzeFoodImage(options) {
     return processAnalysisResponse(analysis, activeRestrictions);
   } catch (error) {
     console.log(`Error analyzing food image: ${error}`, "food-analyzer");
-    throw new Error(`Failed to analyze food image: ${error.message || String(error)}`);
+    throw new Error(
+      `Failed to analyze food image: ${error.message || String(error)}`
+    );
   }
 }
 
@@ -81,7 +85,9 @@ async function imageToBase64(filePath) {
     return fileBuffer.toString("base64");
   } catch (error) {
     console.log(`Error converting image to base64: ${error}`, "food-analyzer");
-    throw new Error(`Failed to process image: ${error.message || String(error)}`);
+    throw new Error(
+      `Failed to process image: ${error.message || String(error)}`
+    );
   }
 }
 
@@ -176,7 +182,9 @@ async function callOpenRouterAPI(base64Image, prompt) {
     return completion.choices[0].message.content || "";
   } catch (error) {
     console.log(`Error calling OpenRouter API: ${error}`, "food-analyzer");
-    throw new Error(`Failed to analyze the image: ${error.message || String(error)}`);
+    throw new Error(
+      `Failed to analyze the image: ${error.message || String(error)}`
+    );
   }
 }
 
@@ -203,10 +211,13 @@ function processAnalysisResponse(analysisText, activeRestrictions) {
         foodName: jsonResponse.foodName,
         ingredients: jsonResponse.ingredients || [],
         unsafeReasons: jsonResponse.unsafeReasons || [],
-        description: jsonResponse.description || "No detailed description provided.",
-        safetyReason: jsonResponse.isSafe ? "This food appears safe based on your dietary profile." : 
-          (jsonResponse.unsafeReasons && jsonResponse.unsafeReasons.length > 0 ? 
-            jsonResponse.unsafeReasons[0] : "This food may not be compatible with your dietary profile.")
+        description:
+          jsonResponse.description || "No detailed description provided.",
+        safetyReason: jsonResponse.isSafe
+          ? "This food appears safe based on your dietary profile."
+          : jsonResponse.unsafeReasons && jsonResponse.unsafeReasons.length > 0
+          ? jsonResponse.unsafeReasons[0]
+          : "This food may not be compatible with your dietary profile.",
       };
     }
 
@@ -216,8 +227,9 @@ function processAnalysisResponse(analysisText, activeRestrictions) {
       foodName: "Unknown food",
       ingredients: [],
       unsafeReasons: ["Could not properly analyze the image"],
-      description: "The AI could not properly analyze this image. Please try again with a clearer photo.",
-      safetyReason: "Could not properly analyze the image"
+      description:
+        "The AI could not properly analyze this image. Please try again with a clearer photo.",
+      safetyReason: "Could not properly analyze the image",
     };
   } catch (error) {
     console.log(`Error processing AI response: ${error}`, "food-analyzer");
@@ -226,8 +238,9 @@ function processAnalysisResponse(analysisText, activeRestrictions) {
       foodName: "Unknown food",
       ingredients: [],
       unsafeReasons: ["Error processing analysis"],
-      description: "There was an error processing the analysis. Please try again.",
-      safetyReason: "Error processing analysis"
+      description:
+        "There was an error processing the analysis. Please try again.",
+      safetyReason: "Error processing analysis",
     };
   }
 }
@@ -241,17 +254,17 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
     const messages = [
       {
         role: "system",
-        content: systemPrompt
-      }
+        content: systemPrompt,
+      },
     ];
 
     // Add conversation history if available
     if (history && history.length > 0) {
       // Add previous messages to provide context
-      history.forEach(msg => {
+      history.forEach((msg) => {
         messages.push({
           role: msg.role,
-          content: msg.content
+          content: msg.content,
         });
       });
     }
@@ -261,9 +274,14 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
     if (currentQuery) {
       messages.push({
         role: "user",
-        content: currentQuery
+        content: currentQuery,
       });
     }
+
+    console.log(
+      "Calling OpenRouter API with messages:",
+      JSON.stringify(messages)
+    );
 
     const completion = await openai.chat.completions.create({
       model: "meta-llama/llama-4-maverick:free",
@@ -272,10 +290,26 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
       temperature: 0.7, // Add some creativity but keep responses focused
     });
 
-    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a response.";
+    // Add proper error handling and validation
+    if (!completion || !completion.choices || !completion.choices.length) {
+      console.log(
+        "Invalid response from OpenRouter API:",
+        JSON.stringify(completion)
+      );
+      return "I'm sorry, I couldn't generate a response due to a service error.";
+    }
+
+    return (
+      completion.choices[0].message.content ||
+      "I'm sorry, I couldn't generate a response."
+    );
   } catch (error) {
-    console.log(`Error calling OpenRouter API for chat: ${error}`, "food-analyzer");
-    throw new Error(`Failed to process your question: ${error.message || String(error)}`);
+    console.log(
+      `Error calling OpenRouter API for chat: ${error}`,
+      "food-analyzer"
+    );
+    // Return a fallback response instead of throwing an error
+    return "I'm sorry, I encountered an error processing your question. Please try again later.";
   }
 }
 
@@ -284,14 +318,14 @@ async function callOpenRouterChatAPI(systemPrompt, history = [], currentQuery) {
  */
 function createChatPrompt(query, dietaryProfile, history = []) {
   let dietaryContext = "The user has not set up a dietary profile.";
-  
+
   if (dietaryProfile) {
     const restrictions = [
       ...(dietaryProfile.allergies || []),
       ...(dietaryProfile.dietaryPreferences || []),
       ...(dietaryProfile.healthRestrictions || []),
     ];
-    
+
     if (restrictions.length > 0) {
       dietaryContext = `The user has the following dietary restrictions: ${restrictions
         .map((r) => `"${r}" (must avoid ${RESTRICTION_DETAILS[r] || r})`)
@@ -341,20 +375,22 @@ async function processChatQuery(options) {
   try {
     // Get user's dietary profile for context
     const dietaryProfile = await storage.getDietaryProfileByUserId(userId);
-    
+
     // Create prompt for the AI with conversation history
     const prompt = createChatPrompt(query, dietaryProfile, history);
-    
+
     // Call OpenRouter API using OpenAI SDK with the current query explicitly passed
     const response = await callOpenRouterChatAPI(prompt, history, query);
-    
+
     return {
       answer: response,
-      query: query
+      query: query,
     };
   } catch (error) {
     console.log(`Error processing chat query: ${error}`, "food-analyzer");
-    throw new Error(`Failed to process chat query: ${error.message || String(error)}`);
+    throw new Error(
+      `Failed to process chat query: ${error.message || String(error)}`
+    );
   }
 }
 

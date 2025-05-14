@@ -11,6 +11,7 @@ import {
   UserCircle,
   UserPlus,
   Info as InfoIcon,
+  LogOut, // Add this line
 } from "lucide-react";
 import {
   Tooltip,
@@ -42,6 +43,7 @@ interface ProfileProps {
   auth: {
     user: any;
     isAuthenticated: boolean;
+    logout: () => Promise<void>; // Add this line
   };
 }
 
@@ -58,7 +60,7 @@ type UserProfileFormValues = z.infer<typeof userProfileSchema>;
 
 export default function Profile({ auth }: ProfileProps) {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, user } = auth;
+  const { isAuthenticated, user, logout } = auth; // Add logout here
   const [isEditing, setIsEditing] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -71,41 +73,43 @@ export default function Profile({ auth }: ProfileProps) {
   }, [isAuthenticated, setLocation]);
 
   // Fetch user profile and dietary information
-  const { data: userProfile, isLoading: isProfileLoading } = useQuery<UserProfileFormValues>({
-    queryKey: [`/api/users/${user?.id}/profile`],
-    queryFn: () => {
-      // Get the auth token from Supabase
-      const supabaseAuth = JSON.parse(
-        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
-      );
-      const accessToken = supabaseAuth?.access_token || "";
+  const { data: userProfile, isLoading: isProfileLoading } =
+    useQuery<UserProfileFormValues>({
+      queryKey: [`/api/users/${user?.id}/profile`],
+      queryFn: () => {
+        // Get the auth token from Supabase
+        const supabaseAuth = JSON.parse(
+          localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+        );
+        const accessToken = supabaseAuth?.access_token || "";
 
-      return fetchApi(`/api/users/${user?.id}/profile`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-    },
-    enabled: isAuthenticated,
-  });
+        return fetchApi(`/api/users/${user?.id}/profile`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      },
+      enabled: isAuthenticated,
+    });
 
-  const { data: dietaryProfile, isLoading: isDietaryLoading } = useQuery<DietaryProfile>({
-    queryKey: [`/api/dietary-profile/${user?.id}`],
-    queryFn: () => {
-      // Get the auth token from Supabase
-      const supabaseAuth = JSON.parse(
-        localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
-      );
-      const accessToken = supabaseAuth?.access_token || "";
+  const { data: dietaryProfile, isLoading: isDietaryLoading } =
+    useQuery<DietaryProfile>({
+      queryKey: [`/api/dietary-profile/${user?.id}`],
+      queryFn: () => {
+        // Get the auth token from Supabase
+        const supabaseAuth = JSON.parse(
+          localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
+        );
+        const accessToken = supabaseAuth?.access_token || "";
 
-      return fetchApi(`/api/dietary-profile/${user?.id}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-    },
-    enabled: isAuthenticated,
-  });
+        return fetchApi(`/api/dietary-profile/${user?.id}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      },
+      enabled: isAuthenticated,
+    });
 
   const { data: scanLimit } = useQuery<ScanLimit>({
     queryKey: [`/api/scan-limits/${user?.id}`],
@@ -118,8 +122,8 @@ export default function Profile({ auth }: ProfileProps) {
 
       return fetchApi(`/api/scan-limits/${user?.id}`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
     },
     enabled: isAuthenticated,
@@ -160,88 +164,98 @@ export default function Profile({ auth }: ProfileProps) {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`
+          Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(values)
+        body: JSON.stringify(values),
       });
-      
+
       toast({
         title: "Profile Updated",
         description: "Your profile information has been updated successfully.",
       });
-      
+
       setIsEditing(false);
     } catch (error) {
       toast({
         title: "Update Failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     }
   };
 
-  const updateDietaryProfile = async (field: string, value: string, checked: boolean) => {
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/");
+  };
+
+  const updateDietaryProfile = async (
+    field: string,
+    value: string,
+    checked: boolean
+  ) => {
     if (!dietaryProfile) return;
-    
+
     try {
       let updatedValues: string[] = [];
-      
+
       // Get the auth token from Supabase
       const supabaseAuth = JSON.parse(
         localStorage.getItem("sb-njxfkiparbdkklajlpyp-auth-token") || "{}"
       );
       const accessToken = supabaseAuth?.access_token || "";
-      
+
       if (field === "allergies") {
-        updatedValues = checked 
+        updatedValues = checked
           ? [...dietaryProfile.allergies, value]
-          : dietaryProfile.allergies.filter(item => item !== value);
-        
+          : dietaryProfile.allergies.filter((item) => item !== value);
+
         await fetchApi(`/api/dietary-profile/${user.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             ...dietaryProfile,
-            allergies: updatedValues
-          })
+            allergies: updatedValues,
+          }),
         });
       } else if (field === "dietaryPreferences") {
-        updatedValues = checked 
+        updatedValues = checked
           ? [...dietaryProfile.dietaryPreferences, value]
-          : dietaryProfile.dietaryPreferences.filter(item => item !== value);
-        
+          : dietaryProfile.dietaryPreferences.filter((item) => item !== value);
+
         await fetchApi(`/api/dietary-profile/${user.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             ...dietaryProfile,
-            dietaryPreferences: updatedValues
-          })
+            dietaryPreferences: updatedValues,
+          }),
         });
       } else if (field === "healthRestrictions") {
-        updatedValues = checked 
+        updatedValues = checked
           ? [...dietaryProfile.healthRestrictions, value]
-          : dietaryProfile.healthRestrictions.filter(item => item !== value);
-        
+          : dietaryProfile.healthRestrictions.filter((item) => item !== value);
+
         await fetchApi(`/api/dietary-profile/${user.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             ...dietaryProfile,
-            healthRestrictions: updatedValues
-          })
+            healthRestrictions: updatedValues,
+          }),
         });
       }
-      
+
       toast({
         title: "Dietary Profile Updated",
         description: "Your dietary preferences have been updated successfully.",
@@ -249,7 +263,8 @@ export default function Profile({ auth }: ProfileProps) {
     } catch (error) {
       toast({
         title: "Update Failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     }
@@ -794,6 +809,16 @@ export default function Profile({ auth }: ProfileProps) {
                 <div>
                   <Button variant="outline" className="gap-2">
                     <Shield className="h-4 w-4" /> Change Password
+                  </Button>
+                </div>
+
+                <div className="pt-3 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-primary"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" /> Logout
                   </Button>
                 </div>
 

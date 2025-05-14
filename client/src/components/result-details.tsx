@@ -30,6 +30,41 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
   const [newFoodName, setNewFoodName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Move the mutation hook to the top level of the component
+  // This ensures it's always called in the same order
+  const updateFoodNameMutation = useMutation({
+    mutationFn: async (foodName: string) => {
+      const accessToken = getAuthToken();
+      return fetchApi(`/api/scans/${scanId}/update-food-name`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ foodName }),
+        credentials: "include",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Food Updated",
+        description: "The food has been reanalyzed with the new name.",
+      });
+      // Invalidate and refetch the scan data
+      queryClient.invalidateQueries({ queryKey: [`scan-${scanId}`] });
+      setIsSubmitting(false);
+      setIsCorrectFood(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update food name.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    },
+  });
 
   // Get the auth token from Supabase
   const getAuthToken = () => {
@@ -209,7 +244,10 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
     );
   }
 
+  // Update renderSafetyBadge to handle null scan
   const renderSafetyBadge = () => {
+    if (!scan) return null; // Add null check
+    
     if (scan.isSafe === true) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -254,40 +292,6 @@ export default function ResultDetails({ scanId, userId }: ResultDetailsProps) {
       return "Recent";
     }
   };
-
-  // Add mutation for updating food name
-  const updateFoodNameMutation = useMutation({
-    mutationFn: async (foodName: string) => {
-      const accessToken = getAuthToken();
-      return fetchApi(`/api/scans/${scanId}/update-food-name`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ foodName }),
-        credentials: "include",
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Food Updated",
-        description: "The food has been reanalyzed with the new name.",
-      });
-      // Invalidate and refetch the scan data
-      queryClient.invalidateQueries({ queryKey: [`scan-${scanId}`] });
-      setIsSubmitting(false);
-      setIsCorrectFood(true);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update food name.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-    },
-  });
 
   const handleFoodNameUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
